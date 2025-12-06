@@ -470,11 +470,61 @@ function App() {
 
     try {
       if (form.id) {
-        // Update existing task
+        // Update existing task - capture history for changes
+        const existingTask = tasks.find((t) => t.id === form.id)
+        
+        if (existingTask) {
+          // Track progress history if progress changed
+          if (progressValue !== existingTask.progress) {
+            const progressHistoryEntry = {
+              timestamp: new Date().toISOString(),
+              value: progressValue,
+              changedBy: currentUser?.name,
+              note: 'Manual update',
+            }
+            taskData.progressHistory = [...(existingTask.progressHistory || []), progressHistoryEntry]
+          }
+          
+          // Track invested history if invested amount changed (for monetary tasks)
+          if (form.type === 'monetary' && existingTask.monetary) {
+            const newInvested = parseFormattedNumber(form.invested || '0')
+            if (newInvested !== existingTask.monetary.invested) {
+              const investedHistoryEntry = {
+                timestamp: new Date().toISOString(),
+                value: newInvested,
+                changedBy: currentUser?.name,
+                note: 'Manual update',
+              }
+              taskData.investedHistory = [...(existingTask.investedHistory || []), investedHistoryEntry]
+            }
+          }
+        }
+        
         await taskService.updateTask(form.id, taskData)
         setSnackbar({ open: true, message: 'Task updated successfully', severity: 'success' })
       } else {
-        // Create new task
+        // Create new task - initialize history with first entry
+        const timestamp = new Date().toISOString()
+        
+        // Add initial progress history entry
+        taskData.progressHistory = [{
+          timestamp,
+          value: progressValue,
+          changedBy: currentUser?.name,
+          note: 'Initial value',
+        }]
+        
+        // Add initial invested history entry for monetary tasks
+        if (form.type === 'monetary') {
+          const investedValue = parseFormattedNumber(form.invested || '0')
+          taskData.investedHistory = [{
+            timestamp,
+            value: investedValue,
+            changedBy: currentUser?.name,
+            note: 'Initial value',
+          }]
+        }
+        
         await taskService.createTask(taskData)
         setSnackbar({ open: true, message: 'Task created successfully', severity: 'success' })
       }
