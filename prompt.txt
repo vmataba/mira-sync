@@ -1,0 +1,15 @@
+hello, help me create an app about planning, setting goals, establishing a budget and assign someone to handle a specific task.
+
+A task can be monetary or non-monetary, and can be assigned to a person or a group of people. A task can also have a deadline and a priority level.
+
+For monetary tasks, there should be a way to specify the amount, currency, amount already invested.
+
+For all the tasks, monetary or non-monetary, there should be a way to specify the progress.
+
+This app should be very simple and easy to use intuitively.
+
+It's design should adhere to mobile first approach and use google material design.
+
+All the tasks, should have a parent, something like a sprint in jira.
+
+We will use firebase and netlify for this app. therefore add placeholders for the firebase and netlify configuration files where the real configuration files will be added.

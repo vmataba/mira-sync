@@ -1,0 +1,16 @@
+# Netlify configuration placeholder for mira-sync goal & task planner
+# Adjust build settings and environment variables as needed.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[dev]
+  command = "npm run dev"
+  port = 5173
+
+# Example redirect for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

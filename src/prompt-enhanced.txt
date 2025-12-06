@@ -1,0 +1,75 @@
+Improve the app by following the below instructions:
+
+# 📱 App Specification: Goal & Task Planning Tool
+
+## 1. Purpose
+Create a simple, intuitive mobile-first application for:
+- Planning and setting goals
+- Establishing budgets
+- Assigning tasks to individuals or groups
+
+The app should prioritize ease of use and follow **Google Material Design** principles.
+
+---
+
+## 2. Core Features
+
+### 2.1 Task Management
+- **Task Types**:
+  - Monetary tasks (with financial attributes)
+  - Non-monetary tasks (general activities)
+- **Attributes for all tasks**:
+  - Title & description
+  - Assigned to: individual or group
+  - Deadline (date/time)
+  - Priority level (High, Medium, Low)
+  - Progress tracking (percentage or status)
+  - Parent task/sprint (similar to Jira sprints)
+
+### 2.2 Monetary Task Attributes
+- Amount (numeric value)
+- Currency (USD, EUR, etc.)
+- Amount already invested
+
+### 2.3 Grouping & Hierarchy
+- Tasks must belong to a **parent sprint** or project container
+- Sprints can contain multiple tasks
+
+---
+
+## 3. Design Guidelines
+- **Mobile-first approach**: optimized for smartphones, responsive for larger screens
+- **Google Material Design**: consistent UI components, typography, and color schemes
+- **Intuitive UX**: minimal clicks, clear navigation, progress indicators
+
+---
+
+## 4. Technical Stack
+- **Frontend**:
+  - Mobile-first web app (React or similar framework)
+  - Material UI components
+
+- **Backend & Database**:
+  - Firebase (authentication, Firestore/Realtime Database, hosting)
+  - Placeholder configuration file for Firebase (`firebaseConfig.js`)
+
+- **Deployment**:
+  - Netlify (continuous deployment, hosting)
+  - Placeholder configuration file for Netlify (`netlify.toml`)
+
+---
+
+## 5. Additional Requirements
+- **Scalability**: support multiple users and groups
+- **Security**: Firebase authentication for user accounts
+- **Testing**: basic unit tests for task creation, assignment, and progress updates
+- **Future Enhancements (optional)**:
+  - Notifications/reminders for deadlines
+  - Analytics dashboard for budget vs. progress
+
+---
+
+## 6. Deliverables
+- Functional prototype with task creation, assignment, and progress tracking
+- Placeholder Firebase and Netlify configuration files
+- Documentation for setup, deployment, and usage
