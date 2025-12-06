@@ -12,10 +12,12 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   Grid2 as Grid,
   IconButton,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Select,
   Snackbar,
@@ -387,10 +389,10 @@ function App() {
   )
 
   const handleOpenCreate = () => {
-    // By default, create under the active Plan Window.
+    // By default, create under the selected Plan Window.
     setForm((prev) => ({
       ...emptyTaskForm,
-      sprintId: activePlanWindowId || prev.sprintId,
+      sprintId: selectedSprintId || prev.sprintId,
     }))
     setDialogOpen(true)
   }
@@ -949,50 +951,113 @@ function App() {
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   border: 'none',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'radial-gradient(circle at top right, rgba(255, 255, 255, 0.1) 0%, transparent 60%)',
+                    pointerEvents: 'none',
+                  },
                 }}
               >
-                <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                <CardContent sx={{ p: { xs: 3, sm: 4 }, position: 'relative' }}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                    <Box sx={{ width: 8, height: 8, bgcolor: 'rgba(255, 255, 255, 0.9)', borderRadius: '50%' }} />
-                    <Typography variant="subtitle2" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                    <CheckCircleIcon sx={{ fontSize: 20, color: 'rgba(255, 255, 255, 0.9)' }} />
+                    <Typography variant="subtitle2" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>
                       Active Plan Window
                     </Typography>
                   </Stack>
-                  <Typography variant="h4" sx={{ mb: 1.5, color: 'white' }}>
+                  <Typography variant="h3" sx={{ mb: 1.5, color: 'white', fontWeight: 700 }}>
                     {activePlanWindow.name}
                   </Typography>
                   {activePlanWindow.description && (
-                    <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+                    <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 3, lineHeight: 1.6 }}>
                       {activePlanWindow.description}
                     </Typography>
                   )}
-                  <Stack direction="row" spacing={{ xs: 3, sm: 5 }} sx={{ mt: 3 }}>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: 'rgba(255, 255, 255, 0.8)', display: 'block', mb: 0.5 }}>
-                        Total
+                  <Box sx={{ mb: 3 }}>
+                    <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500 }}>
+                        Overall Progress
                       </Typography>
-                      <Typography variant="h3" sx={{ fontWeight: 700, color: 'white', fontSize: { xs: '2rem', sm: '2.5rem' } }}>
-                        {tasks.filter((t) => t.sprintId === activePlanWindowId).length}
+                      <Typography variant="body2" sx={{ color: 'white', fontWeight: 700 }}>
+                        {(() => {
+                          const activeTasks = tasks.filter((t) => t.sprintId === activePlanWindowId)
+                          if (activeTasks.length === 0) return '0%'
+                          const avgProgress = Math.round(
+                            activeTasks.reduce((sum, t) => sum + t.progress, 0) / activeTasks.length
+                          )
+                          return `${avgProgress}%`
+                        })()}
                       </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: 'rgba(255, 255, 255, 0.8)', display: 'block', mb: 0.5 }}>
-                        Done
-                      </Typography>
-                      <Typography variant="h3" sx={{ fontWeight: 700, color: 'white', fontSize: { xs: '2rem', sm: '2.5rem' } }}>
-                        {tasks.filter((t) => t.sprintId === activePlanWindowId && t.progress >= 100).length}
-                      </Typography>
-                    </Box>
-                  </Stack>
+                    </Stack>
+                    <LinearProgress
+                      variant="determinate"
+                      value={(() => {
+                        const activeTasks = tasks.filter((t) => t.sprintId === activePlanWindowId)
+                        if (activeTasks.length === 0) return 0
+                        return Math.round(
+                          activeTasks.reduce((sum, t) => sum + t.progress, 0) / activeTasks.length
+                        )
+                      })()}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        '& .MuiLinearProgress-bar': {
+                          bgcolor: 'white',
+                          borderRadius: 4,
+                        },
+                      }}
+                    />
+                  </Box>
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 4 }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h2" sx={{ fontWeight: 700, color: 'white', fontSize: { xs: '2rem', sm: '2.5rem' }, mb: 0.5 }}>
+                          {tasks.filter((t) => t.sprintId === activePlanWindowId).length}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          Total Tasks
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 4 }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h2" sx={{ fontWeight: 700, color: 'white', fontSize: { xs: '2rem', sm: '2.5rem' }, mb: 0.5 }}>
+                          {tasks.filter((t) => t.sprintId === activePlanWindowId && t.progress >= 100).length}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          Completed
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 4 }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h2" sx={{ fontWeight: 700, color: 'white', fontSize: { xs: '2rem', sm: '2.5rem' }, mb: 0.5 }}>
+                          {tasks.filter((t) => t.sprintId === activePlanWindowId && t.progress < 100).length}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          In Progress
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
                 </CardContent>
               </Card>
             )}
 
             <Box>
-              <Typography variant="h5" sx={{ mb: 2 }}>
+              <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
                 All Plan Windows
               </Typography>
-              <Grid container spacing={2}>
+              <Grid container spacing={3}>
                 {sprints.map((sprint) => (
                   <Grid key={sprint.id} size={{ xs: 12, sm: 6, md: 4 }}>
                     <Card
@@ -1003,26 +1068,29 @@ function App() {
                             : 'divider',
                         borderWidth: sprint.id === activePlanWindowId ? 2 : 1,
                         bgcolor: 'background.paper',
-                        transition: 'all 200ms ease-out',
+                        transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
                         cursor: 'pointer',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
                         '&:hover': {
                           borderColor: 'primary.main',
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                          transform: 'translateY(-6px)',
+                          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                         },
                       }}
                     >
-                      <CardContent sx={{ p: 2.5 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                      <CardContent sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
                           <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant="h6" fontWeight={600} noWrap>
+                            <Typography variant="h6" fontWeight={700} noWrap sx={{ mb: 0.5 }}>
                               {sprint.name}
                             </Typography>
                             {sprint.description && (
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
-                                sx={{ mt: 0.5, mb: 2 }}
+                                sx={{ lineHeight: 1.5 }}
                               >
                                 {sprint.description}
                               </Typography>
@@ -1035,7 +1103,10 @@ function App() {
                                 e.stopPropagation()
                                 handleOpenPlanDialog(sprint)
                               }}
-                              sx={{ color: 'text.secondary' }}
+                              sx={{ 
+                                color: 'text.secondary',
+                                '&:hover': { color: 'primary.main', bgcolor: 'action.hover' }
+                              }}
                             >
                               <EditIcon fontSize="small" />
                             </IconButton>
@@ -1046,7 +1117,11 @@ function App() {
                                   e.stopPropagation()
                                   handleDeleteSprint(sprint.id)
                                 }}
-                                sx={{ color: 'error.main' }}
+                                sx={{ 
+                                  color: 'text.secondary',
+                                  '&:hover': { color: 'error.main', bgcolor: 'action.hover' },
+                                  '&:disabled': { color: 'action.disabled' }
+                                }}
                                 disabled={tasks.some((t) => t.sprintId === sprint.id)}
                               >
                                 <DeleteIcon fontSize="small" />
@@ -1054,27 +1129,102 @@ function App() {
                             )}
                           </Stack>
                         </Stack>
-                        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                        
+                        <Divider sx={{ my: 2 }} />
+                        
+                        <Box sx={{ mb: 2 }}>
+                          <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                              Progress
+                            </Typography>
+                            <Typography variant="caption" fontWeight={700} color="primary.main">
+                              {(() => {
+                                const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id)
+                                if (sprintTasks.length === 0) return '0%'
+                                const avgProgress = Math.round(
+                                  sprintTasks.reduce((sum, t) => sum + t.progress, 0) / sprintTasks.length
+                                )
+                                return `${avgProgress}%`
+                              })()}
+                            </Typography>
+                          </Stack>
+                          <LinearProgress
+                            variant="determinate"
+                            value={(() => {
+                              const sprintTasks = tasks.filter((t) => t.sprintId === sprint.id)
+                              if (sprintTasks.length === 0) return 0
+                              return Math.round(
+                                sprintTasks.reduce((sum, t) => sum + t.progress, 0) / sprintTasks.length
+                              )
+                            })()}
+                            sx={{
+                              height: 6,
+                              borderRadius: 3,
+                              bgcolor: 'action.hover',
+                              '& .MuiLinearProgress-bar': {
+                                borderRadius: 3,
+                              },
+                            }}
+                          />
+                        </Box>
+                        
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                          <Grid size={4}>
+                            <Box sx={{ textAlign: 'center', py: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                              <Typography variant="h6" fontWeight={700} color="primary.main">
+                                {tasks.filter((t) => t.sprintId === sprint.id).length}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                Total
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid size={4}>
+                            <Box sx={{ textAlign: 'center', py: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                              <Typography variant="h6" fontWeight={700} color="success.main">
+                                {tasks.filter((t) => t.sprintId === sprint.id && t.progress >= 100).length}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                Done
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid size={4}>
+                            <Box sx={{ textAlign: 'center', py: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                              <Typography variant="h6" fontWeight={700} color="warning.main">
+                                {tasks.filter((t) => t.sprintId === sprint.id && t.progress < 100).length}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                Active
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                        
+                        <Box sx={{ mt: 'auto' }}>
                           {sprint.id === activePlanWindowId ? (
                             <Chip
-                              size="small"
-                              label="Active"
+                              size="medium"
+                              label="Active Window"
                               color="primary"
                               icon={<CheckCircleIcon />}
+                              sx={{ width: '100%', fontWeight: 600 }}
                             />
                           ) : (
                             <Button
-                              size="small"
+                              fullWidth
+                              size="medium"
                               variant="outlined"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleSetActivePlanWindow(sprint.id)
                               }}
+                              sx={{ fontWeight: 600 }}
                             >
                               Set as Active
                             </Button>
                           )}
-                        </Stack>
+                        </Box>
                       </CardContent>
                     </Card>
                   </Grid>
