@@ -14,7 +14,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import { db } from '../firebaseApp'
-import type { Task, Sprint } from '../models'
+import type { Task, Sprint, Expense } from '../models'
 import type { AuthUser } from '../auth/authService'
 
 // Collection names
@@ -22,6 +22,7 @@ const COLLECTIONS = {
   TASKS: 'tasks',
   SPRINTS: 'sprints',
   USERS: 'users',
+  EXPENSES: 'expenses',
 } as const
 
 // ============= TASKS =============
@@ -437,6 +438,182 @@ export const userService = {
     } catch (error) {
       console.error('Error checking username:', error)
       return false
+    }
+  },
+}
+
+// ============= EXPENSES =============
+
+export const expenseService = {
+  // Get all expenses
+  async getAllExpenses(): Promise<Expense[]> {
+    try {
+      const expensesRef = collection(db, COLLECTIONS.EXPENSES)
+      const snapshot = await getDocs(expensesRef)
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Expense[]
+    } catch (error) {
+      console.error('Error fetching expenses:', error)
+      return []
+    }
+  },
+
+  // Get expenses by user ID
+  async getExpensesByUserId(userId: string): Promise<Expense[]> {
+    try {
+      const expensesRef = collection(db, COLLECTIONS.EXPENSES)
+      const q = query(expensesRef, where('userId', '==', userId))
+      const snapshot = await getDocs(q)
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Expense[]
+    } catch (error) {
+      console.error('Error fetching expenses by user:', error)
+      return []
+    }
+  },
+
+  // Get a single expense
+  async getExpense(expenseId: string): Promise<Expense | null> {
+    try {
+      const expenseRef = doc(db, COLLECTIONS.EXPENSES, expenseId)
+      const snapshot = await getDoc(expenseRef)
+      if (snapshot.exists()) {
+        return { id: snapshot.id, ...snapshot.data() } as Expense
+      }
+      return null
+    } catch (error) {
+      console.error('Error fetching expense:', error)
+      return null
+    }
+  },
+
+  // Create a new expense
+  async createExpense(expense: Omit<Expense, 'id'>): Promise<string | null> {
+    try {
+      const expensesRef = collection(db, COLLECTIONS.EXPENSES)
+      const docRef = await addDoc(expensesRef, {
+        ...expense,
+        createdAt: expense.createdAt || new Date().toISOString(),
+      })
+      return docRef.id
+    } catch (error) {
+      console.error('Error creating expense:', error)
+      return null
+    }
+  },
+
+  // Update an expense
+  async updateExpense(expenseId: string, updates: Partial<Expense>): Promise<boolean> {
+    try {
+      const expenseRef = doc(db, COLLECTIONS.EXPENSES, expenseId)
+      await updateDoc(expenseRef, {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      })
+      return true
+    } catch (error) {
+      console.error('Error updating expense:', error)
+      return false
+    }
+  },
+
+  // Delete an expense
+  async deleteExpense(expenseId: string): Promise<boolean> {
+    try {
+      const expenseRef = doc(db, COLLECTIONS.EXPENSES, expenseId)
+      await deleteDoc(expenseRef)
+      return true
+    } catch (error) {
+      console.error('Error deleting expense:', error)
+      return false
+    }
+  },
+
+  // Subscribe to expenses changes
+  subscribeToExpenses(callback: (expenses: Expense[]) => void): Unsubscribe {
+    const expensesRef = collection(db, COLLECTIONS.EXPENSES)
+    return onSnapshot(
+      expensesRef,
+      (snapshot) => {
+        const expenses = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Expense[]
+        callback(expenses)
+      },
+      (error) => {
+        console.error('Error subscribing to expenses:', error)
+      }
+    )
+  },
+
+  // Get expenses within date range
+  async getExpensesByDateRange(startDate: string, endDate: string): Promise<Expense[]> {
+    try {
+      const expensesRef = collection(db, COLLECTIONS.EXPENSES)
+      const q = query(
+        expensesRef,
+        where('date', '>=', startDate),
+        where('date', '<=', endDate)
+      )
+      const snapshot = await getDocs(q)
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Expense[]
+    } catch (error) {
+      console.error('Error fetching expenses by date range:', error)
+      return []
+    }
+  },
+
+  // Get expense analytics for a user
+  async getExpenseAnalytics(userId: string): Promise<{
+    totalAmount: number
+    expenseCount: number
+    averageExpense: number
+    expensesByMonth: { [month: string]: number }
+    expensesByPurpose: { [purpose: string]: number }
+  }> {
+    try {
+      const expenses = await this.getExpensesByUserId(userId)
+      
+      const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+      const expenseCount = expenses.length
+      const averageExpense = expenseCount > 0 ? totalAmount / expenseCount : 0
+      
+      const expensesByMonth: { [month: string]: number } = {}
+      const expensesByPurpose: { [purpose: string]: number } = {}
+      
+      expenses.forEach((expense) => {
+        // Group by month
+        const month = expense.date.substring(0, 7) // YYYY-MM format
+        expensesByMonth[month] = (expensesByMonth[month] || 0) + expense.amount
+        
+        // Group by purpose
+        expensesByPurpose[expense.purpose] = (expensesByPurpose[expense.purpose] || 0) + expense.amount
+      })
+      
+      return {
+        totalAmount,
+        expenseCount,
+        averageExpense,
+        expensesByMonth,
+        expensesByPurpose,
+      }
+    } catch (error) {
+      console.error('Error getting expense analytics:', error)
+      return {
+        totalAmount: 0,
+        expenseCount: 0,
+        averageExpense: 0,
+        expensesByMonth: {},
+        expensesByPurpose: {},
+      }
     }
   },
 }

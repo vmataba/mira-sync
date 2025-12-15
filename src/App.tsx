@@ -39,14 +39,16 @@ import PeopleIcon from '@mui/icons-material/People'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import LogoutIcon from '@mui/icons-material/Logout'
-import type { Assignment, Priority, Sprint, Task, TaskType } from './models'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import type { Assignment, Priority, Sprint, Task, TaskType, Expense } from './models'
 import { MiraSyncLogo } from './components/Logo'
 import { TaskCard } from './components/TaskCard'
 import { TaskDialog } from './components/TaskDialog'
 import { MemberDialog } from './components/MemberDialog'
 import { LoginScreen } from './components/LoginScreen'
+import { ExpensesPage } from './pages/ExpensesPage'
 import type { AuthUser } from './auth/authService'
-import { taskService, sprintService, userService, initializeFirestore } from './services/firestoreService'
+import { taskService, sprintService, userService, expenseService, initializeFirestore } from './services/firestoreService'
 import { firebaseAuthService } from './services/firebaseAuthService'
 import { parseFormattedNumber, formatInputValue } from './utils/currency'
 
@@ -268,12 +270,16 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [filterAssigneeId, setFilterAssigneeId] = useState<string>('all')
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' })
+  
+  // Expense tracker state
+  const [expenses, setExpenses] = useState<Expense[]>([])
 
   // Initialize Firebase data on mount
   useEffect(() => {
     let unsubscribeTasks: (() => void) | undefined
     let unsubscribeSprints: (() => void) | undefined
     let unsubscribeUsers: (() => void) | undefined
+    let unsubscribeExpenses: (() => void) | undefined
 
     const initializeData = async () => {
       try {
@@ -316,6 +322,10 @@ function App() {
           }
         })
 
+        unsubscribeExpenses = expenseService.subscribeToExpenses((fetchedExpenses) => {
+          setExpenses(fetchedExpenses)
+        })
+
         setLoading(false)
       } catch (error) {
         console.error('Error initializing data:', error)
@@ -330,6 +340,7 @@ function App() {
       if (unsubscribeTasks) unsubscribeTasks()
       if (unsubscribeSprints) unsubscribeSprints()
       if (unsubscribeUsers) unsubscribeUsers()
+      if (unsubscribeExpenses) unsubscribeExpenses()
     }
   }, [])
 
@@ -929,6 +940,21 @@ function App() {
                 New Task
               </Button>
             )}
+            {currentTab === 3 && !isSmall && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                aria-label="Add expense"
+                size="small"
+                onClick={() => {
+                  // Trigger the add expense action in ExpensesPage
+                  const event = new CustomEvent('openExpenseDialog')
+                  window.dispatchEvent(event)
+                }}
+              >
+                New Expense
+              </Button>
+            )}
             <IconButton
               onClick={handleLogout}
               size="small"
@@ -953,6 +979,7 @@ function App() {
           <Tab label="Family" icon={<PeopleIcon />} iconPosition="start" />
           <Tab label="Plan Windows" />
           <Tab label="Tasks" />
+          <Tab label="Expenses" icon={<AccountBalanceWalletIcon />} iconPosition="start" />
         </Tabs>
       </AppBar>
 
@@ -1561,6 +1588,16 @@ function App() {
                 )}
             </Stack>
           </Stack>
+        )}
+
+        {currentTab === 3 && currentUser && (
+          <ExpensesPage
+            expenses={expenses}
+            currentUser={currentUser}
+            users={assignments}
+            isSmall={isSmall}
+            onShowSnackbar={(message, severity) => setSnackbar({ open: true, message, severity })}
+          />
         )}
       </Box>
 

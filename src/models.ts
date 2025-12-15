@@ -44,3 +44,14 @@ export interface Task {
   progressHistory?: HistoryEntry[]
   investedHistory?: HistoryEntry[]
 }
+
+export interface Expense {
+  id: string
+  amount: number // Amount in TZS
+  purpose: string // Short purpose/category
+  description: string // Detailed description
+  date: string // ISO date string
+  userId: string // User who recorded the expense
+  userName: string // User's display name for easy viewing
+  createdAt: string // When the expense was recorded
+}
