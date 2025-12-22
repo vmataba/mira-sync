@@ -80,7 +80,7 @@ export const HistoryDialog: React.FC<HistoryDialogProps> = ({
                 >
                   <ListItemText
                     primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         <Typography variant="body1" fontWeight={600}>
                           {formatValue(entry.value)}
                         </Typography>
@@ -92,15 +92,32 @@ export const HistoryDialog: React.FC<HistoryDialogProps> = ({
                         )}
                         {entry.note && (
                           <Chip
-                            label={entry.note}
+                            label={entry.note.split(' - ')[0]}
                             size="small"
-                            sx={{ ml: 1 }}
+                            color="primary"
+                            variant="outlined"
                           />
                         )}
                       </Box>
                     }
                     secondary={
                       <Box sx={{ mt: 0.5 }}>
+                        {entry.note && entry.note.includes(' - ') && (
+                          <Typography 
+                            variant="body2" 
+                            color="text.primary"
+                            sx={{ 
+                              mb: 1,
+                              p: 1,
+                              bgcolor: 'grey.50',
+                              borderRadius: 1,
+                              borderLeft: '3px solid',
+                              borderColor: 'primary.main',
+                            }}
+                          >
+                            {entry.note.split(' - ').slice(1).join(' - ')}
+                          </Typography>
+                        )}
                         <Typography variant="caption" color="text.secondary">
                           {new Date(entry.timestamp).toLocaleString()}
                         </Typography>

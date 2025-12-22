@@ -40,6 +40,8 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import LogoutIcon from '@mui/icons-material/Logout'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek'
+import AssignmentIcon from '@mui/icons-material/Assignment'
 import type { Assignment, Priority, Sprint, Task, TaskType, Expense } from './models'
 import { MiraSyncLogo } from './components/Logo'
 import { TaskCard } from './components/TaskCard'
@@ -736,18 +738,22 @@ function App() {
     }
   }
 
-  const handleIncrementProgress = async (taskId: string, increment: number) => {
+  const handleIncrementProgress = async (taskId: string, increment: number, description?: string) => {
     const task = tasks.find((t) => t.id === taskId)
     if (!task) return
 
     const newProgress = Math.min(100, Math.max(0, task.progress + increment))
+    
+    // Build note with increment and optional description
+    const incrementNote = `${increment > 0 ? '+' : ''}${increment}%`
+    const note = description ? `${incrementNote} - ${description}` : incrementNote
     
     // Add to progress history
     const historyEntry = {
       timestamp: new Date().toISOString(),
       value: newProgress,
       changedBy: currentUser?.name,
-      note: `${increment > 0 ? '+' : ''}${increment}%`,
+      note,
     }
     
     const progressHistory = [...(task.progressHistory || []), historyEntry]
@@ -764,7 +770,7 @@ function App() {
     }
   }
 
-  const handleIncrementInvested = async (taskId: string, increment: number) => {
+  const handleIncrementInvested = async (taskId: string, increment: number, description?: string) => {
     const task = tasks.find((t) => t.id === taskId)
     if (!task || !task.monetary) return
 
@@ -775,12 +781,16 @@ function App() {
       ? Math.min(100, Math.round((newInvested / task.monetary.amount) * 100))
       : task.progress
 
+    // Build note with increment and optional description
+    const incrementNote = `${increment > 0 ? '+' : ''}${increment.toLocaleString()} TZS`
+    const investedNote = description ? `${incrementNote} - ${description}` : incrementNote
+
     // Add to invested history
     const investedHistoryEntry = {
       timestamp: new Date().toISOString(),
       value: newInvested,
       changedBy: currentUser?.name,
-      note: `${increment > 0 ? '+' : ''}${increment.toLocaleString()} TZS`,
+      note: investedNote,
     }
     
     // Add to progress history if it changed
@@ -968,7 +978,29 @@ function App() {
         <Tabs
           value={currentTab}
           onChange={(_, newValue) => setCurrentTab(newValue)}
-          sx={{ px: { xs: 2, sm: 3 }, borderTop: '1px solid', borderColor: 'divider' }}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{ 
+            px: { xs: 0, sm: 2 }, 
+            borderTop: '1px solid', 
+            borderColor: 'divider',
+            '& .MuiTabs-scrollButtons': {
+              '&.Mui-disabled': { opacity: 0.3 },
+              width: { xs: 24, sm: 40 },
+            },
+            '& .MuiTab-root': {
+              minWidth: { xs: 'auto', sm: 100 },
+              minHeight: { xs: 44, sm: 48 },
+              px: { xs: 1, sm: 2 },
+              py: { xs: 1, sm: 1.5 },
+              fontSize: { xs: '0.7rem', sm: '0.875rem' },
+              '& .MuiSvgIcon-root': {
+                fontSize: { xs: '1rem', sm: '1.25rem' },
+                marginRight: { xs: 0.5, sm: 1 },
+              },
+            },
+          }}
           TabIndicatorProps={{
             style: {
               height: 3,
@@ -976,10 +1008,30 @@ function App() {
             },
           }}
         >
-          <Tab label="Family" icon={<PeopleIcon />} iconPosition="start" />
-          <Tab label="Plan Windows" />
-          <Tab label="Tasks" />
-          <Tab label="Expenses" icon={<AccountBalanceWalletIcon />} iconPosition="start" />
+          <Tab 
+            label="Family"
+            icon={<PeopleIcon />} 
+            iconPosition="start"
+            aria-label="Family"
+          />
+          <Tab 
+            label={isSmall ? "Plans" : "Plan Windows"}
+            icon={<CalendarViewWeekIcon />} 
+            iconPosition="start"
+            aria-label="Plan Windows"
+          />
+          <Tab 
+            label="Tasks"
+            icon={<AssignmentIcon />} 
+            iconPosition="start"
+            aria-label="Tasks"
+          />
+          <Tab 
+            label="Expenses"
+            icon={<AccountBalanceWalletIcon />} 
+            iconPosition="start"
+            aria-label="Expenses"
+          />
         </Tabs>
       </AppBar>
 

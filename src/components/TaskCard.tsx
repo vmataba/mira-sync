@@ -34,8 +34,8 @@ interface TaskCardProps {
   onClick: () => void
   onEdit?: () => void
   onDelete?: () => void
-  onIncrementProgress?: (taskId: string, increment: number) => void
-  onIncrementInvested?: (taskId: string, increment: number) => void
+  onIncrementProgress?: (taskId: string, increment: number, description?: string) => void
+  onIncrementInvested?: (taskId: string, increment: number, description?: string) => void
 }
 
 export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncrementProgress, onIncrementInvested }: TaskCardProps) => {
@@ -43,25 +43,29 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
   const [investedDialog, setInvestedDialog] = useState(false)
   const [progressValue, setProgressValue] = useState('')
   const [investedValue, setInvestedValue] = useState('')
+  const [progressDescription, setProgressDescription] = useState('')
+  const [investedDescription, setInvestedDescription] = useState('')
   const [progressHistoryDialog, setProgressHistoryDialog] = useState(false)
   const [investedHistoryDialog, setInvestedHistoryDialog] = useState(false)
 
   const handleProgressIncrement = () => {
     const increment = Number(progressValue)
     if (!isNaN(increment) && increment !== 0 && onIncrementProgress) {
-      onIncrementProgress(task.id, increment)
+      onIncrementProgress(task.id, increment, progressDescription.trim() || undefined)
     }
     setProgressDialog(false)
     setProgressValue('')
+    setProgressDescription('')
   }
 
   const handleInvestedIncrement = () => {
     const increment = Number(investedValue.replace(/,/g, ''))
     if (!isNaN(increment) && increment !== 0 && onIncrementInvested) {
-      onIncrementInvested(task.id, increment)
+      onIncrementInvested(task.id, increment, investedDescription.trim() || undefined)
     }
     setInvestedDialog(false)
     setInvestedValue('')
+    setInvestedDescription('')
   }
   return (
     <>
@@ -372,46 +376,52 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
                     {task.progress}%
                   </Typography>
                   {onIncrementProgress && (
-                    <>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setProgressHistoryDialog(true)
-                        }}
-                        sx={{
-                          width: 18,
-                          height: 18,
-                          color: 'text.secondary',
-                          '&:hover': {
-                            bgcolor: 'action.hover',
-                            color: 'primary.main',
-                          },
-                        }}
-                        title="View history"
-                      >
-                        <HistoryIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setProgressDialog(true)
-                        }}
-                        sx={{
-                          width: 20,
-                          height: 20,
-                          color: 'primary.main',
-                          '&:hover': {
-                            bgcolor: 'primary.light',
+                    <Stack direction="row" spacing={0.5}>
+                      <Tooltip title="View history" arrow>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setProgressHistoryDialog(true)
+                          }}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            bgcolor: 'grey.100',
+                            border: '1px solid',
+                            borderColor: 'grey.300',
+                            color: 'text.secondary',
+                            '&:hover': {
+                              bgcolor: 'primary.light',
+                              borderColor: 'primary.main',
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          <HistoryIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Update progress" arrow>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setProgressDialog(true)
+                          }}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            bgcolor: 'primary.main',
                             color: 'white',
-                          },
-                        }}
-                        title="Increment progress"
-                      >
-                        <AddCircleOutlineIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </>
+                            '&:hover': {
+                              bgcolor: 'primary.dark',
+                            },
+                          }}
+                        >
+                          <AddCircleOutlineIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
                   )}
                 </Stack>
               </Stack>
@@ -450,46 +460,52 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
                   </Typography>
                   <Stack direction="row" spacing={0.5}>
                     {task.investedHistory && task.investedHistory.length > 0 && (
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setInvestedHistoryDialog(true)
-                        }}
-                        sx={{
-                          width: 16,
-                          height: 16,
-                          color: 'text.secondary',
-                          '&:hover': {
-                            bgcolor: 'action.hover',
-                            color: 'primary.main',
-                          },
-                        }}
-                        title="View history"
-                      >
-                        <HistoryIcon sx={{ fontSize: 12 }} />
-                      </IconButton>
+                      <Tooltip title="View history" arrow>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setInvestedHistoryDialog(true)
+                          }}
+                          sx={{
+                            width: 26,
+                            height: 26,
+                            bgcolor: 'grey.100',
+                            border: '1px solid',
+                            borderColor: 'grey.300',
+                            color: 'text.secondary',
+                            '&:hover': {
+                              bgcolor: 'secondary.light',
+                              borderColor: 'secondary.main',
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          <HistoryIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
                     )}
                     {onIncrementInvested && (
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setInvestedDialog(true)
-                        }}
-                        sx={{
-                          width: 18,
-                          height: 18,
-                          color: 'primary.main',
-                          '&:hover': {
-                            bgcolor: 'primary.light',
+                      <Tooltip title="Update investment" arrow>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setInvestedDialog(true)
+                          }}
+                          sx={{
+                            width: 26,
+                            height: 26,
+                            bgcolor: 'secondary.main',
                             color: 'white',
-                          },
-                        }}
-                        title="Increment invested"
-                      >
-                        <AddCircleOutlineIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
+                            '&:hover': {
+                              bgcolor: 'secondary.dark',
+                            },
+                          }}
+                        >
+                          <AddCircleOutlineIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </Stack>
                 </Stack>
@@ -539,6 +555,17 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
           placeholder="e.g., 10 or -5"
           helperText="Enter positive value to increase or negative to decrease"
         />
+        <TextField
+          margin="dense"
+          label="Description (optional)"
+          fullWidth
+          multiline
+          rows={2}
+          value={progressDescription}
+          onChange={(e) => setProgressDescription(e.target.value)}
+          placeholder="What was accomplished?"
+          helperText="Describe what this progress represents"
+        />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setProgressDialog(false)}>Cancel</Button>
@@ -562,6 +589,17 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
           }}
           placeholder="e.g., 100,000 or 1,000,000"
           helperText="Enter the amount to add to invested"
+        />
+        <TextField
+          margin="dense"
+          label="Description (optional)"
+          fullWidth
+          multiline
+          rows={2}
+          value={investedDescription}
+          onChange={(e) => setInvestedDescription(e.target.value)}
+          placeholder="What was this investment for?"
+          helperText="Describe what this investment represents"
         />
       </DialogContent>
       <DialogActions>
