@@ -20,13 +20,11 @@ const TRANSACTIONS_COLLECTION = 'estbel_transactions'
 export const schemeService = {
   // Subscribe to real-time scheme updates
   subscribeToSchemes(callback: (schemes: Scheme[]) => void): () => void {
-    console.log('subscribeToSchemes: Setting up subscription')
     const colRef = collection(db, SCHEMES_COLLECTION)
     
     return onSnapshot(
       colRef, 
       (snapshot) => {
-        console.log('subscribeToSchemes: Received snapshot with', snapshot.docs.length, 'docs')
         const schemes: Scheme[] = snapshot.docs.map((docSnap) => ({
           id: docSnap.id,
           ...docSnap.data(),
@@ -35,11 +33,10 @@ export const schemeService = {
         const filtered = schemes
           .filter(s => !s.isArchived)
           .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-        console.log('subscribeToSchemes: Filtered schemes:', filtered.length)
         callback(filtered)
       },
       (error) => {
-        console.error('subscribeToSchemes: Error in subscription:', error)
+        console.error('Error in scheme subscription:', error)
       }
     )
   },
@@ -65,9 +62,7 @@ export const schemeService = {
         schemeData.description = data.description.trim()
       }
       
-      console.log('Creating scheme with data:', schemeData)
       const docRef = await addDoc(collection(db, SCHEMES_COLLECTION), schemeData)
-      console.log('Scheme created with ID:', docRef.id)
       return docRef.id
     } catch (error) {
       console.error('Error creating scheme:', error)

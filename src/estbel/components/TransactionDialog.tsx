@@ -101,72 +101,63 @@ export const TransactionDialog = React.memo(({
       maxWidth="sm"
       fullWidth
       PaperProps={{
-        sx: { borderRadius: 3 },
+        sx: { borderRadius: 3, m: { xs: 1, sm: 2 } },
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
-        <Typography variant="h5" fontWeight={700}>
+      <DialogTitle sx={{ pb: 1, px: { xs: 2, sm: 3 } }}>
+        <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
           {editingTransaction ? 'Edit Transaction' : 'New Transaction'}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {editingTransaction
-            ? 'Update the transaction details'
-            : 'Record a new cash flow entry'}
         </Typography>
       </DialogTitle>
 
-      <DialogContent dividers sx={{ py: 3 }}>
-        <Stack spacing={3}>
-          {/* Transaction Type */}
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              Transaction Type
-            </Typography>
-            <ToggleButtonGroup
-              value={form.type}
-              exclusive
-              onChange={(_, value) => value && setForm({ ...form, type: value })}
-              fullWidth
+      <DialogContent dividers sx={{ py: 2, px: { xs: 2, sm: 3 } }}>
+        <Stack spacing={2}>
+          {/* Transaction Type - compact */}
+          <ToggleButtonGroup
+            value={form.type}
+            exclusive
+            onChange={(_, value) => value && setForm({ ...form, type: value })}
+            fullWidth
+            size="small"
+            sx={{
+              '& .MuiToggleButton-root': {
+                py: 1,
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                '&.Mui-selected': {
+                  color: 'white',
+                },
+              },
+            }}
+          >
+            <ToggleButton
+              value="in"
               sx={{
-                '& .MuiToggleButton-root': {
-                  py: 1.5,
-                  fontWeight: 600,
-                  borderRadius: 2,
-                  '&.Mui-selected': {
-                    color: 'white',
-                  },
+                '&.Mui-selected': {
+                  bgcolor: estbelColors.success.main,
+                  '&:hover': { bgcolor: estbelColors.success.dark },
                 },
               }}
             >
-              <ToggleButton
-                value="in"
-                sx={{
-                  '&.Mui-selected': {
-                    bgcolor: estbelColors.success.main,
-                    '&:hover': { bgcolor: estbelColors.success.dark },
-                  },
-                }}
-              >
-                <ArrowDownwardIcon sx={{ mr: 1 }} />
-                Cash In
-              </ToggleButton>
-              <ToggleButton
-                value="out"
-                sx={{
-                  '&.Mui-selected': {
-                    bgcolor: estbelColors.error.main,
-                    '&:hover': { bgcolor: estbelColors.error.dark },
-                  },
-                }}
-              >
-                <ArrowUpwardIcon sx={{ mr: 1 }} />
-                Cash Out
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+              <ArrowDownwardIcon sx={{ mr: 0.5, fontSize: 18 }} />
+              Cash In
+            </ToggleButton>
+            <ToggleButton
+              value="out"
+              sx={{
+                '&.Mui-selected': {
+                  bgcolor: estbelColors.error.main,
+                  '&:hover': { bgcolor: estbelColors.error.dark },
+                },
+              }}
+            >
+              <ArrowUpwardIcon sx={{ mr: 0.5, fontSize: 18 }} />
+              Cash Out
+            </ToggleButton>
+          </ToggleButtonGroup>
 
-          {/* Scheme Selection */}
-          <FormControl fullWidth>
+          {/* Scheme Selection - compact */}
+          <FormControl fullWidth size="small">
             <InputLabel>Scheme</InputLabel>
             <Select
               value={form.schemeId}
@@ -175,24 +166,24 @@ export const TransactionDialog = React.memo(({
             >
               {schemes.map((scheme) => (
                 <MenuItem key={scheme.id} value={scheme.id}>
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
                     <Box
                       sx={{
-                        width: 12,
-                        height: 12,
+                        width: 10,
+                        height: 10,
                         borderRadius: '50%',
                         bgcolor: scheme.color,
                       }}
                     />
-                    <span>{scheme.name}</span>
+                    <span style={{ fontSize: '0.875rem' }}>{scheme.name}</span>
                   </Stack>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          {/* Amount Fields */}
-          <Stack direction="row" spacing={2}>
+          {/* Amount Fields - compact */}
+          <Stack direction="row" spacing={1.5}>
             <TextField
               label="Unit Price (TZS)"
               value={form.unitPrice}
@@ -200,83 +191,110 @@ export const TransactionDialog = React.memo(({
               fullWidth
               required
               placeholder="0"
+              size="small"
               inputProps={{ inputMode: 'numeric' }}
             />
             <TextField
-              label="Quantity"
+              label="Qty"
               value={form.quantity}
               onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-              sx={{ width: 120 }}
+              sx={{ width: 80 }}
+              size="small"
               type="number"
               inputProps={{ min: 1, step: 1 }}
             />
           </Stack>
 
-          {/* Date */}
+          {/* Date - styled */}
           <TextField
             label="Date"
             type="date"
             value={form.date}
             onChange={(e) => setForm({ ...form, date: e.target.value })}
             fullWidth
+            size="small"
             InputLabelProps={{ shrink: true }}
+            sx={{
+              '& .MuiInputBase-root': {
+                borderRadius: 1.5,
+                bgcolor: alpha(typeColor, 0.04),
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: alpha(typeColor, 0.2),
+              },
+              '& input[type="date"]::-webkit-calendar-picker-indicator': {
+                cursor: 'pointer',
+                opacity: 0.7,
+                '&:hover': { opacity: 1 },
+              },
+            }}
           />
 
-          {/* Description */}
+          {/* Description - compact */}
           <TextField
             label="Description"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             fullWidth
+            size="small"
             multiline
             rows={2}
-            placeholder="What is this transaction for?"
+            placeholder="What is this for?"
             inputProps={{ maxLength: 200 }}
           />
 
-          {/* Total Preview */}
+          {/* Total Preview - compact */}
           <Box
             sx={{
-              p: 2.5,
+              p: 1.5,
               borderRadius: 2,
               bgcolor: alpha(typeColor, 0.08),
-              borderLeft: `4px solid ${typeColor}`,
+              borderLeft: `3px solid ${typeColor}`,
             }}
           >
-            <Typography variant="overline" color="text.secondary" fontWeight={600}>
-              TOTAL AMOUNT
-            </Typography>
-            <Typography
-              variant="h4"
-              fontWeight={700}
-              sx={{ color: typeColor, mt: 0.5 }}
-            >
-              {isIn ? '+' : '-'}TZS {computedTotal.toLocaleString('en-US')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {parseFormattedNumber(form.unitPrice).toLocaleString('en-US')} × {form.quantity || 1}
-            </Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box>
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary" 
+                  fontWeight={600}
+                  sx={{ fontSize: '0.65rem' }}
+                >
+                  TOTAL
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  {parseFormattedNumber(form.unitPrice).toLocaleString('en-US')} × {form.quantity || 1}
+                </Typography>
+              </Box>
+              <Typography
+                fontWeight={700}
+                sx={{ color: typeColor, fontSize: '1.25rem' }}
+              >
+                {isIn ? '+' : '-'}TZS {computedTotal.toLocaleString('en-US')}
+              </Typography>
+            </Stack>
           </Box>
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 2 }}>
-        <Button onClick={handleClose} disabled={loading} size="large">
+      <DialogActions sx={{ p: 2, px: { xs: 2, sm: 3 } }}>
+        <Button onClick={handleClose} disabled={loading} size="small">
           Cancel
         </Button>
         <Button
           onClick={handleSave}
           variant="contained"
           disabled={!form.schemeId || !form.unitPrice || loading}
-          size="large"
+          size="small"
           sx={{
             bgcolor: typeColor,
+            px: 2,
             '&:hover': {
               bgcolor: isIn ? estbelColors.success.dark : estbelColors.error.dark,
             },
           }}
         >
-          {loading ? 'Saving...' : editingTransaction ? 'Update' : isIn ? 'Record Cash In' : 'Record Cash Out'}
+          {loading ? 'Saving...' : editingTransaction ? 'Update' : isIn ? 'Record In' : 'Record Out'}
         </Button>
       </DialogActions>
     </Dialog>

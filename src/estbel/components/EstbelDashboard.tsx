@@ -20,21 +20,23 @@ import {
   useTheme,
   Snackbar,
   Alert,
+  Chip,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SearchIcon from '@mui/icons-material/Search'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
-import ShareIcon from '@mui/icons-material/Share'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import { SchemeCard } from './SchemeCard'
 import { SchemeDialog } from './SchemeDialog'
 import { TransactionCard } from './TransactionCard'
 import { TransactionDialog } from './TransactionDialog'
+import { ReportDialog } from './ReportDialog'
 import { useSchemes, useTransactions, useSchemeSelection } from '../hooks/useEstbel'
-import { downloadPDF, shareViaWhatsApp } from '../utils/pdfReport'
+import { formatAbbreviated } from '../utils/formatters'
 import type { Scheme, Transaction, SchemeFormData, TransactionFormData } from '../types'
 import { estbelColors } from '../../theme'
 import type { AuthUser } from '../../auth/authService'
@@ -42,10 +44,6 @@ import type { AuthUser } from '../../auth/authService'
 interface EstbelDashboardProps {
   currentUser: AuthUser
   onBack: () => void
-}
-
-const formatNumber = (num: number): string => {
-  return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
 export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashboardProps) => {
@@ -56,6 +54,7 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
   const { schemes, stats, createScheme, updateScheme, deleteScheme } = useSchemes()
   const { selectedSchemeId, selectedScheme, selectScheme } = useSchemeSelection()
   const {
+    transactions,
     filteredTransactions,
     filters,
     createTransaction,
@@ -69,20 +68,18 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
   const [editingScheme, setEditingScheme] = useState<{ id: string; data: SchemeFormData } | null>(null)
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
 
   // Handlers
   const handleCreateScheme = useCallback(async (data: SchemeFormData) => {
-    console.log('handleCreateScheme called with:', data)
-    console.log('currentUser:', currentUser)
     const id = await createScheme(data, currentUser.id)
-    console.log('createScheme returned:', id)
     if (id) {
       setSnackbar({ open: true, message: 'Scheme created successfully', severity: 'success' })
     } else {
       setSnackbar({ open: true, message: 'Failed to create scheme', severity: 'error' })
     }
-  }, [createScheme, currentUser])
+  }, [createScheme, currentUser.id])
 
   const handleUpdateScheme = useCallback(async (data: SchemeFormData) => {
     if (!editingScheme) return
@@ -136,26 +133,9 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
     }
   }, [deleteTransaction])
 
-  const handleDownloadPDF = useCallback(() => {
-    if (!selectedScheme) return
-    downloadPDF({
-      scheme: selectedScheme,
-      transactions: filteredTransactions,
-      dateRange: filters.dateRange,
-      generatedBy: currentUser.name,
-    })
-    setSnackbar({ open: true, message: 'PDF downloaded successfully', severity: 'success' })
-  }, [selectedScheme, filteredTransactions, filters.dateRange, currentUser.name])
-
-  const handleShareWhatsApp = useCallback(async () => {
-    if (!selectedScheme) return
-    await shareViaWhatsApp({
-      scheme: selectedScheme,
-      transactions: filteredTransactions,
-      dateRange: filters.dateRange,
-      generatedBy: currentUser.name,
-    })
-  }, [selectedScheme, filteredTransactions, filters.dateRange, currentUser.name])
+  const handleOpenReport = useCallback(() => {
+    setReportDialogOpen(true)
+  }, [])
 
   // Scheme view
   if (!selectedSchemeId) {
@@ -167,19 +147,31 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
             bgcolor: estbelColors.background.paper,
             borderBottom: `1px solid ${estbelColors.border}`,
             px: { xs: 2, sm: 3 },
-            py: 2,
+            py: { xs: 1.5, sm: 2 },
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <IconButton onClick={onBack} sx={{ color: estbelColors.text.primary }}>
-              <ArrowBackIcon />
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <IconButton 
+              onClick={onBack} 
+              size="small"
+              sx={{ color: estbelColors.text.primary }}
+            >
+              <ArrowBackIcon fontSize="small" />
             </IconButton>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography 
+                variant="h6" 
+                fontWeight={700}
+                sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}
+              >
                 Estbel
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Multi-Scheme Cash Flow
+              <Typography 
+                variant="caption" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+              >
+                Select a scheme to view analytics
               </Typography>
             </Box>
             <Button
@@ -189,76 +181,38 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
                 setEditingScheme(null)
                 setSchemeDialogOpen(true)
               }}
-              size={isSmall ? 'small' : 'medium'}
+              size="small"
+              sx={{ 
+                px: { xs: 1.5, sm: 2 },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              }}
             >
               {isSmall ? 'New' : 'New Scheme'}
             </Button>
           </Stack>
         </Box>
 
-        {/* Stats Cards */}
-        <Box sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
-          <Grid container spacing={2} sx={{ mb: 4 }}>
-            <Grid size={{ xs: 6, sm: 3 }}>
-              <Card sx={{ bgcolor: estbelColors.primary.main, color: 'white', border: 'none' }}>
-                <CardContent sx={{ p: 2 }}>
-                  <AccountBalanceWalletIcon sx={{ fontSize: 28, opacity: 0.8, mb: 1 }} />
-                  <Typography variant="overline" sx={{ opacity: 0.8 }}>
-                    Total Balance
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    TZS {formatNumber(stats.totalBalance)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3 }}>
-              <Card sx={{ bgcolor: estbelColors.success.main, color: 'white', border: 'none' }}>
-                <CardContent sx={{ p: 2 }}>
-                  <TrendingUpIcon sx={{ fontSize: 28, opacity: 0.8, mb: 1 }} />
-                  <Typography variant="overline" sx={{ opacity: 0.8 }}>
-                    Total In
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    +{formatNumber(stats.totalIn)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3 }}>
-              <Card sx={{ bgcolor: estbelColors.error.main, color: 'white', border: 'none' }}>
-                <CardContent sx={{ p: 2 }}>
-                  <TrendingDownIcon sx={{ fontSize: 28, opacity: 0.8, mb: 1 }} />
-                  <Typography variant="overline" sx={{ opacity: 0.8 }}>
-                    Total Out
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    -{formatNumber(stats.totalOut)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3 }}>
-              <Card sx={{ border: `1px solid ${estbelColors.border}` }}>
-                <CardContent sx={{ p: 2 }}>
-                  <Typography variant="overline" color="text.secondary">
-                    Schemes
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700} color="primary">
-                    {stats.schemeCount}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {stats.transactionCount} transactions
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          {/* Schemes Grid */}
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-            Your Schemes
-          </Typography>
+        {/* Schemes Grid - No collective stats, just schemes */}
+        <Box sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 } }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+            <Typography 
+              variant="subtitle1" 
+              fontWeight={600}
+              sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}
+            >
+              Your Schemes
+            </Typography>
+            <Chip
+              size="small"
+              label={`${schemes.length} scheme${schemes.length !== 1 ? 's' : ''}`}
+              sx={{ 
+                height: 22,
+                fontSize: '0.7rem',
+                bgcolor: alpha(estbelColors.primary.main, 0.1),
+                color: estbelColors.primary.main,
+              }}
+            />
+          </Stack>
           
           {schemes.length === 0 ? (
             <Card
@@ -341,124 +295,294 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
   // Transaction view (scheme selected)
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: estbelColors.background.default }}>
-      {/* Header */}
+      {/* Header with scheme analytics */}
       <Box
         sx={{
           bgcolor: selectedScheme?.color || estbelColors.primary.main,
           color: 'white',
           px: { xs: 2, sm: 3 },
-          py: 3,
+          py: { xs: 2, sm: 2.5 },
         }}
       >
-        <Stack direction="row" alignItems="flex-start" spacing={2}>
-          <IconButton onClick={() => selectScheme(null)} sx={{ color: 'white', mt: -0.5 }}>
-            <ArrowBackIcon />
+        <Stack direction="row" alignItems="flex-start" spacing={1.5}>
+          <IconButton 
+            onClick={() => selectScheme(null)} 
+            size="small"
+            sx={{ color: 'white', mt: -0.25 }}
+          >
+            <ArrowBackIcon fontSize="small" />
           </IconButton>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="overline" sx={{ opacity: 0.8 }}>
-              SCHEME
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography 
+              variant="overline" 
+              sx={{ opacity: 0.8, fontSize: { xs: '0.6rem', sm: '0.65rem' } }}
+            >
+              SCHEME ANALYTICS
             </Typography>
-            <Typography variant="h4" fontWeight={700}>
+            <Typography 
+              variant="h6" 
+              fontWeight={700}
+              noWrap
+              sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}
+            >
               {selectedScheme?.name}
             </Typography>
-            {selectedScheme?.description && (
-              <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
-                {selectedScheme.description}
-              </Typography>
-            )}
           </Box>
-          <Stack direction="row" spacing={1}>
-            <IconButton onClick={handleDownloadPDF} sx={{ color: 'white' }}>
-              <PictureAsPdfIcon />
-            </IconButton>
-            <IconButton onClick={handleShareWhatsApp} sx={{ color: 'white' }}>
-              <ShareIcon />
-            </IconButton>
-          </Stack>
+          <Button
+            onClick={handleOpenReport}
+            size="small"
+            variant="contained"
+            startIcon={<PictureAsPdfIcon sx={{ fontSize: 16 }} />}
+            sx={{ 
+              bgcolor: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              fontSize: '0.75rem',
+              px: 1.5,
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+            }}
+          >
+            Report
+          </Button>
         </Stack>
 
-        {/* Balance Stats */}
-        <Stack direction="row" spacing={3} sx={{ mt: 3 }}>
-          <Box>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+        {/* Analytics Cards - scheme specific */}
+        <Stack 
+          direction="row" 
+          spacing={1} 
+          sx={{ mt: 2 }}
+        >
+          {/* Balance */}
+          <Box
+            sx={{
+              flex: 1,
+              bgcolor: 'rgba(255,255,255,0.15)',
+              borderRadius: 2,
+              p: { xs: 1, sm: 1.5 },
+              textAlign: 'center',
+            }}
+          >
+            <Typography 
+              variant="caption" 
+              sx={{ opacity: 0.9, fontSize: { xs: '0.6rem', sm: '0.7rem' }, display: 'block' }}
+            >
               Balance
             </Typography>
-            <Typography variant="h5" fontWeight={700}>
-              TZS {formatNumber(selectedScheme?.balance || 0)}
+            <Typography 
+              fontWeight={700}
+              sx={{ fontSize: { xs: '0.95rem', sm: '1.1rem' }, mt: 0.25 }}
+            >
+              {formatAbbreviated(selectedScheme?.balance || 0)}
             </Typography>
           </Box>
-          <Box>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              In
-            </Typography>
-            <Typography variant="h6" fontWeight={600}>
-              +{formatNumber(selectedScheme?.totalIn || 0)}
+          
+          {/* Total In */}
+          <Box
+            sx={{
+              flex: 1,
+              bgcolor: 'rgba(255,255,255,0.15)',
+              borderRadius: 2,
+              p: { xs: 1, sm: 1.5 },
+              textAlign: 'center',
+            }}
+          >
+            <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
+              <TrendingUpIcon sx={{ fontSize: { xs: 12, sm: 14 }, opacity: 0.9 }} />
+              <Typography 
+                variant="caption" 
+                sx={{ opacity: 0.9, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}
+              >
+                In
+              </Typography>
+            </Stack>
+            <Typography 
+              fontWeight={700}
+              sx={{ fontSize: { xs: '0.95rem', sm: '1.1rem' }, mt: 0.25 }}
+            >
+              +{formatAbbreviated(selectedScheme?.totalIn || 0)}
             </Typography>
           </Box>
-          <Box>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              Out
-            </Typography>
-            <Typography variant="h6" fontWeight={600}>
-              -{formatNumber(selectedScheme?.totalOut || 0)}
+          
+          {/* Total Out */}
+          <Box
+            sx={{
+              flex: 1,
+              bgcolor: 'rgba(255,255,255,0.15)',
+              borderRadius: 2,
+              p: { xs: 1, sm: 1.5 },
+              textAlign: 'center',
+            }}
+          >
+            <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
+              <TrendingDownIcon sx={{ fontSize: { xs: 12, sm: 14 }, opacity: 0.9 }} />
+              <Typography 
+                variant="caption" 
+                sx={{ opacity: 0.9, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}
+              >
+                Out
+              </Typography>
+            </Stack>
+            <Typography 
+              fontWeight={700}
+              sx={{ fontSize: { xs: '0.95rem', sm: '1.1rem' }, mt: 0.25 }}
+            >
+              -{formatAbbreviated(selectedScheme?.totalOut || 0)}
             </Typography>
           </Box>
         </Stack>
       </Box>
 
-      {/* Filters */}
-      <Box sx={{ px: { xs: 2, sm: 3 }, py: 2, bgcolor: estbelColors.background.paper }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
-            size="small"
-            placeholder="Search transactions..."
-            value={filters.searchQuery}
-            onChange={(e) => updateFilters({ searchQuery: e.target.value })}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ flex: 1 }}
-          />
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Type</InputLabel>
-            <Select
-              value={filters.type}
-              label="Type"
-              onChange={(e) => updateFilters({ type: e.target.value as any })}
-            >
-              <MenuItem value="all">All</MenuItem>
-              <MenuItem value="in">Cash In</MenuItem>
-              <MenuItem value="out">Cash Out</MenuItem>
-            </Select>
-          </FormControl>
+      {/* Filters - compact and mobile-friendly */}
+      <Box 
+        sx={{ 
+          px: { xs: 2, sm: 3 }, 
+          py: 1.5, 
+          bgcolor: estbelColors.background.paper,
+          borderBottom: `1px solid ${estbelColors.border}`,
+        }}
+      >
+        <Stack spacing={1.5}>
+          {/* Search and Type filter row */}
+          <Stack direction="row" spacing={1}>
+            <TextField
+              size="small"
+              placeholder="Search..."
+              value={filters.searchQuery}
+              onChange={(e) => updateFilters({ searchQuery: e.target.value })}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 18 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ 
+                flex: 1,
+                '& .MuiInputBase-root': { 
+                  height: 36,
+                  fontSize: '0.875rem',
+                },
+              }}
+            />
+            <FormControl size="small" sx={{ minWidth: 90 }}>
+              <Select
+                value={filters.type}
+                onChange={(e) => updateFilters({ type: e.target.value as 'all' | 'in' | 'out' })}
+                displayEmpty
+                sx={{ 
+                  height: 36,
+                  fontSize: '0.875rem',
+                }}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="in">In</MenuItem>
+                <MenuItem value="out">Out</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+          
+          {/* Date filters row */}
+          <Stack direction="row" spacing={1} alignItems="center">
+            <CalendarTodayIcon sx={{ fontSize: 16, color: estbelColors.primary.main }} />
+            <TextField
+              type="date"
+              size="small"
+              label="From"
+              value={filters.dateRange.startDate || ''}
+              onChange={(e) => updateFilters({ 
+                dateRange: { ...filters.dateRange, startDate: e.target.value || null } 
+              })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ 
+                flex: 1,
+                '& .MuiInputBase-root': { 
+                  height: 36,
+                  fontSize: '0.8rem',
+                  borderRadius: 1.5,
+                  bgcolor: alpha(estbelColors.primary.main, 0.04),
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: alpha(estbelColors.primary.main, 0.2),
+                },
+                '& input[type="date"]::-webkit-calendar-picker-indicator': {
+                  cursor: 'pointer',
+                  opacity: 0.7,
+                  filter: 'invert(0.3)',
+                  '&:hover': { opacity: 1 },
+                },
+              }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ px: 0.5 }}>—</Typography>
+            <TextField
+              type="date"
+              size="small"
+              label="To"
+              value={filters.dateRange.endDate || ''}
+              onChange={(e) => updateFilters({ 
+                dateRange: { ...filters.dateRange, endDate: e.target.value || null } 
+              })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ 
+                flex: 1,
+                '& .MuiInputBase-root': { 
+                  height: 36,
+                  fontSize: '0.8rem',
+                  borderRadius: 1.5,
+                  bgcolor: alpha(estbelColors.primary.main, 0.04),
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: alpha(estbelColors.primary.main, 0.2),
+                },
+                '& input[type="date"]::-webkit-calendar-picker-indicator': {
+                  cursor: 'pointer',
+                  opacity: 0.7,
+                  filter: 'invert(0.3)',
+                  '&:hover': { opacity: 1 },
+                },
+              }}
+            />
+            {(filters.dateRange.startDate || filters.dateRange.endDate) && (
+              <Button 
+                size="small" 
+                onClick={() => updateFilters({ dateRange: { startDate: null, endDate: null } })}
+                sx={{ 
+                  minWidth: 'auto',
+                  px: 1,
+                  fontSize: '0.7rem',
+                  textTransform: 'none',
+                }}
+              >
+                Clear
+              </Button>
+            )}
+          </Stack>
         </Stack>
       </Box>
 
       {/* Transactions List */}
-      <Box sx={{ px: { xs: 2, sm: 3 }, py: 3, pb: 12 }}>
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+      <Box sx={{ px: { xs: 2, sm: 3 }, py: 2, pb: 10 }}>
+        <Typography 
+          variant="caption" 
+          color="text.secondary" 
+          sx={{ mb: 1.5, display: 'block', fontSize: '0.75rem' }}
+        >
           {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
         </Typography>
 
         {filteredTransactions.length === 0 ? (
           <Card
             sx={{
-              p: 4,
+              p: 3,
               textAlign: 'center',
               border: `2px dashed ${estbelColors.border}`,
               bgcolor: 'transparent',
             }}
           >
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body2" color="text.secondary">
               No transactions found
             </Typography>
           </Card>
         ) : (
-          <Stack spacing={2}>
+          <Stack spacing={1.5}>
             {filteredTransactions.map((tx) => (
               <TransactionCard
                 key={tx.id}
@@ -474,17 +598,18 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
         )}
       </Box>
 
-      {/* FAB */}
+      {/* FAB - smaller on mobile */}
       <Fab
         color="primary"
+        size={isSmall ? 'medium' : 'large'}
         onClick={() => {
           setEditingTransaction(null)
           setTransactionDialogOpen(true)
         }}
         sx={{
           position: 'fixed',
-          bottom: 24,
-          right: 24,
+          bottom: { xs: 16, sm: 24 },
+          right: { xs: 16, sm: 24 },
           bgcolor: selectedScheme?.color,
           '&:hover': {
             bgcolor: alpha(selectedScheme?.color || estbelColors.primary.main, 0.9),
@@ -506,6 +631,17 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
         }}
         onSave={editingTransaction ? handleUpdateTransaction : handleCreateTransaction}
       />
+
+      {selectedScheme && (
+        <ReportDialog
+          open={reportDialogOpen}
+          scheme={selectedScheme}
+          transactions={transactions}
+          generatedBy={currentUser.name}
+          onClose={() => setReportDialogOpen(false)}
+          onSuccess={(message) => setSnackbar({ open: true, message, severity: 'success' })}
+        />
+      )}
 
       <Snackbar
         open={snackbar.open}

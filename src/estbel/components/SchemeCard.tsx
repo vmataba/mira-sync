@@ -15,6 +15,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import type { Scheme } from '../types'
 import { estbelColors } from '../../theme'
+import { formatAbbreviated } from '../utils/formatters'
 
 interface SchemeCardProps {
   scheme: Scheme
@@ -22,10 +23,6 @@ interface SchemeCardProps {
   onClick: () => void
   onEdit: () => void
   onDelete: () => void
-}
-
-const formatNumber = (num: number): string => {
-  return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
 export const SchemeCard = React.memo(({
@@ -47,11 +44,11 @@ export const SchemeCard = React.memo(({
         overflow: 'hidden',
         borderWidth: isSelected ? 2 : 1,
         borderColor: isSelected ? scheme.color : estbelColors.border,
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'all 0.2s ease-out',
         '&:hover': {
           borderColor: scheme.color,
-          transform: 'translateY(-4px)',
-          boxShadow: `0 12px 24px ${alpha(scheme.color, 0.15)}`,
+          transform: 'translateY(-2px)',
+          boxShadow: `0 8px 16px ${alpha(scheme.color, 0.12)}`,
         },
         '&::before': {
           content: '""',
@@ -59,42 +56,43 @@ export const SchemeCard = React.memo(({
           top: 0,
           left: 0,
           right: 0,
-          height: 4,
+          height: 3,
           background: scheme.color,
         },
       }}
     >
-      <CardContent sx={{ p: 3, pt: 4 }}>
-        <Stack spacing={2}>
-          {/* Header */}
+      <CardContent sx={{ p: { xs: 2, sm: 2.5 }, pt: { xs: 2.5, sm: 3 } }}>
+        <Stack spacing={1.5}>
+          {/* Header - compact */}
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography
-                variant="h6"
                 fontWeight={700}
                 noWrap
-                sx={{ color: estbelColors.text.primary }}
+                sx={{ 
+                  color: estbelColors.text.primary,
+                  fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                }}
               >
                 {scheme.name}
               </Typography>
               {scheme.description && (
                 <Typography
-                  variant="body2"
+                  variant="caption"
                   color="text.secondary"
                   sx={{
-                    mt: 0.5,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
                     display: '-webkit-box',
-                    WebkitLineClamp: 2,
+                    WebkitLineClamp: 1,
                     WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
                   }}
                 >
                   {scheme.description}
                 </Typography>
               )}
             </Box>
-            <Stack direction="row" spacing={0.5} sx={{ ml: 1 }}>
+            <Stack direction="row" spacing={0}>
               <IconButton
                 size="small"
                 onClick={(e) => {
@@ -102,11 +100,12 @@ export const SchemeCard = React.memo(({
                   onEdit()
                 }}
                 sx={{
-                  color: 'text.secondary',
-                  '&:hover': { color: 'primary.main', bgcolor: alpha(estbelColors.primary.main, 0.08) },
+                  p: 0.5,
+                  color: 'text.disabled',
+                  '&:hover': { color: 'primary.main' },
                 }}
               >
-                <EditIcon fontSize="small" />
+                <EditIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
               </IconButton>
               <IconButton
                 size="small"
@@ -115,11 +114,12 @@ export const SchemeCard = React.memo(({
                   onDelete()
                 }}
                 sx={{
-                  color: 'text.secondary',
-                  '&:hover': { color: 'error.main', bgcolor: alpha(estbelColors.error.main, 0.08) },
+                  p: 0.5,
+                  color: 'text.disabled',
+                  '&:hover': { color: 'error.main' },
                 }}
               >
-                <DeleteIcon fontSize="small" />
+                <DeleteIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />
               </IconButton>
             </Stack>
           </Stack>
@@ -127,7 +127,7 @@ export const SchemeCard = React.memo(({
           {/* Balance */}
           <Box
             sx={{
-              p: 2,
+              p: { xs: 1.5, sm: 2 },
               borderRadius: 2,
               bgcolor: alpha(scheme.color, 0.06),
             }}
@@ -138,53 +138,68 @@ export const SchemeCard = React.memo(({
                 color: 'text.secondary',
                 fontWeight: 600,
                 letterSpacing: 1,
+                fontSize: { xs: '0.6rem', sm: '0.65rem' },
               }}
             >
-              Current Balance
+              Balance
             </Typography>
-            <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack direction="row" alignItems="center" spacing={0.5}>
               <Typography
-                variant="h4"
                 sx={{
                   fontWeight: 700,
                   color: isPositive ? estbelColors.success.main : estbelColors.error.main,
                   letterSpacing: '-0.02em',
+                  fontSize: { xs: '1.25rem', sm: '1.5rem' },
                 }}
               >
-                {isPositive ? '' : '-'}TZS {formatNumber(Math.abs(scheme.balance))}
+                {isPositive ? '' : '-'}TZS {formatAbbreviated(Math.abs(scheme.balance))}
               </Typography>
               {isPositive ? (
-                <TrendingUpIcon sx={{ color: estbelColors.success.main }} />
+                <TrendingUpIcon sx={{ color: estbelColors.success.main, fontSize: { xs: 18, sm: 22 } }} />
               ) : (
-                <TrendingDownIcon sx={{ color: estbelColors.error.main }} />
+                <TrendingDownIcon sx={{ color: estbelColors.error.main, fontSize: { xs: 18, sm: 22 } }} />
               )}
             </Stack>
           </Box>
 
-          {/* Stats */}
+          {/* Stats - compact */}
           <Stack direction="row" spacing={2}>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                Total In
+              <Typography 
+                variant="caption" 
+                color="text.secondary" 
+                fontWeight={500}
+                sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+              >
+                In
               </Typography>
               <Typography
-                variant="subtitle1"
                 fontWeight={700}
-                sx={{ color: estbelColors.success.main }}
+                sx={{ 
+                  color: estbelColors.success.main,
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                }}
               >
-                +{formatNumber(scheme.totalIn)}
+                +{formatAbbreviated(scheme.totalIn)}
               </Typography>
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                Total Out
+              <Typography 
+                variant="caption" 
+                color="text.secondary" 
+                fontWeight={500}
+                sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+              >
+                Out
               </Typography>
               <Typography
-                variant="subtitle1"
                 fontWeight={700}
-                sx={{ color: estbelColors.error.main }}
+                sx={{ 
+                  color: estbelColors.error.main,
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                }}
               >
-                -{formatNumber(scheme.totalOut)}
+                -{formatAbbreviated(scheme.totalOut)}
               </Typography>
             </Box>
           </Stack>
@@ -192,12 +207,14 @@ export const SchemeCard = React.memo(({
           {/* Transaction Count */}
           <Chip
             size="small"
-            label={`${scheme.transactionCount} transaction${scheme.transactionCount !== 1 ? 's' : ''}`}
+            label={`${scheme.transactionCount} txn${scheme.transactionCount !== 1 ? 's' : ''}`}
             sx={{
               alignSelf: 'flex-start',
+              height: 22,
               bgcolor: alpha(scheme.color, 0.1),
               color: scheme.color,
               fontWeight: 600,
+              fontSize: '0.7rem',
             }}
           />
         </Stack>

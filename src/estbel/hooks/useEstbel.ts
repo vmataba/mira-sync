@@ -34,17 +34,13 @@ export function useSchemes() {
 
   const createScheme = useCallback(
     async (data: SchemeFormData, userId: string): Promise<string | null> => {
-      console.log('useSchemes.createScheme called with:', { data, userId })
       const schemeData = {
         name: data.name.trim(),
         description: data.description?.trim() || '',
         color: data.color,
         createdBy: userId,
       }
-      console.log('Prepared schemeData:', schemeData)
-      const result = await schemeService.createScheme(schemeData)
-      console.log('schemeService.createScheme result:', result)
-      return result
+      return await schemeService.createScheme(schemeData)
     },
     []
   )

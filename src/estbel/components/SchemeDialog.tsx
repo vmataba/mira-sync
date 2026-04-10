@@ -41,22 +41,12 @@ export const SchemeDialog = React.memo(({
   }, [editingScheme, open])
 
   const handleSave = async () => {
-    console.log('SchemeDialog handleSave called')
-    console.log('Current form state:', form)
-    
-    if (!form.name.trim()) {
-      console.log('Form validation failed: name is empty')
-      return
-    }
+    if (!form.name.trim()) return
     
     setLoading(true)
     try {
-      console.log('Calling onSave with form:', form)
       await onSave(form)
-      console.log('onSave completed successfully')
       onClose()
-    } catch (error) {
-      console.error('Error in onSave:', error)
     } finally {
       setLoading(false)
     }
@@ -75,99 +65,104 @@ export const SchemeDialog = React.memo(({
       maxWidth="sm"
       fullWidth
       PaperProps={{
-        sx: { borderRadius: 3 },
+        sx: { borderRadius: 3, m: { xs: 1, sm: 2 } },
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
-        <Typography variant="h5" fontWeight={700}>
-          {editingScheme ? 'Edit Scheme' : 'Create New Scheme'}
+      <DialogTitle sx={{ pb: 1, px: { xs: 2, sm: 3 } }}>
+        <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+          {editingScheme ? 'Edit Scheme' : 'New Scheme'}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {editingScheme
-            ? 'Update the scheme details below'
-            : 'Create an isolated ledger for tracking cash flow'}
+        <Typography variant="caption" color="text.secondary">
+          {editingScheme ? 'Update details' : 'Create an isolated ledger'}
         </Typography>
       </DialogTitle>
 
-      <DialogContent dividers sx={{ py: 3 }}>
-        <Stack spacing={3}>
+      <DialogContent dividers sx={{ py: 2, px: { xs: 2, sm: 3 } }}>
+        <Stack spacing={2}>
           <TextField
             label="Scheme Name"
-            placeholder="e.g., Business Account, Personal Savings"
+            placeholder="e.g., Business, Personal"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             fullWidth
             required
             autoFocus
+            size="small"
             inputProps={{ maxLength: 50 }}
           />
 
           <TextField
             label="Description (Optional)"
-            placeholder="Brief description of this scheme"
+            placeholder="Brief description"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             fullWidth
+            size="small"
             multiline
             rows={2}
             inputProps={{ maxLength: 200 }}
           />
 
           <Box>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Scheme Color
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              sx={{ mb: 1, display: 'block', fontSize: '0.75rem' }}
+            >
+              Color
             </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1.5}>
+            <Stack direction="row" flexWrap="wrap" gap={1}>
               {SCHEME_COLORS.map((color) => (
                 <Box
                   key={color}
                   onClick={() => setForm({ ...form, color })}
                   sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 1.5,
                     bgcolor: color,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: form.color === color ? '3px solid' : '2px solid transparent',
+                    border: form.color === color ? '2px solid' : '2px solid transparent',
                     borderColor: form.color === color ? estbelColors.primary.main : 'transparent',
-                    boxShadow: form.color === color
-                      ? `0 0 0 2px ${alpha(color, 0.3)}`
-                      : 'none',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.15s',
                     '&:hover': {
                       transform: 'scale(1.1)',
-                      boxShadow: `0 4px 12px ${alpha(color, 0.4)}`,
                     },
                   }}
                 >
                   {form.color === color && (
-                    <CheckIcon sx={{ color: 'white', fontSize: 20 }} />
+                    <CheckIcon sx={{ color: 'white', fontSize: 16 }} />
                   )}
                 </Box>
               ))}
             </Stack>
           </Box>
 
-          {/* Preview */}
+          {/* Preview - compact */}
           <Box
             sx={{
-              p: 2,
+              p: 1.5,
               borderRadius: 2,
               bgcolor: alpha(form.color, 0.08),
-              borderLeft: `4px solid ${form.color}`,
+              borderLeft: `3px solid ${form.color}`,
             }}
           >
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              fontWeight={600}
+              sx={{ fontSize: '0.65rem' }}
+            >
               PREVIEW
             </Typography>
-            <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+            <Typography fontWeight={700} sx={{ fontSize: '0.95rem' }}>
               {form.name || 'Scheme Name'}
             </Typography>
             {form.description && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="caption" color="text.secondary">
                 {form.description}
               </Typography>
             )}
@@ -175,17 +170,17 @@ export const SchemeDialog = React.memo(({
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 2 }}>
-        <Button onClick={handleClose} disabled={loading} size="large">
+      <DialogActions sx={{ p: 2, px: { xs: 2, sm: 3 } }}>
+        <Button onClick={handleClose} disabled={loading} size="small">
           Cancel
         </Button>
         <Button
           onClick={handleSave}
           variant="contained"
           disabled={!form.name.trim() || loading}
-          size="large"
+          size="small"
         >
-          {loading ? 'Saving...' : editingScheme ? 'Update Scheme' : 'Create Scheme'}
+          {loading ? 'Saving...' : editingScheme ? 'Update' : 'Create'}
         </Button>
       </DialogActions>
     </Dialog>
