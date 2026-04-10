@@ -1,14 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   Stack,
-  Card,
-  CardContent,
   Typography,
   Button,
   Box,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import dayjs from 'dayjs'
+import dayjs, { Dayjs } from 'dayjs'
 import type { Expense, Assignment } from '../models'
 import type { AuthUser } from '../auth/authService'
 import { ExpenseDialog } from '../components/ExpenseDialog'
@@ -35,8 +33,10 @@ export function ExpensesPage({
 }: ExpensesPageProps) {
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>(undefined)
-  const [selectedUserId, setSelectedUserId] = useState<string>('all')
-  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('all')
+  // Default to current user's expenses for today
+  const [selectedUserId, setSelectedUserId] = useState<string>(currentUser.id)
+  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('today')
+  const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     expenseId: string | null
@@ -62,14 +62,22 @@ export function ExpensesPage({
       filtered = filtered.filter((expense) => expense.userId === selectedUserId)
     }
 
-    // Filter by time range
-    if (selectedTimeRange !== 'all') {
+    // Filter by time range or specific date
+    if (selectedTimeRange === 'custom' && selectedDate) {
+      // Filter by specific date
+      filtered = filtered.filter((expense) => {
+        const expenseDate = dayjs(expense.date)
+        return expenseDate.isSame(selectedDate, 'day')
+      })
+    } else if (selectedTimeRange !== 'all') {
       const now = dayjs()
       filtered = filtered.filter((expense) => {
         const expenseDate = dayjs(expense.date)
         switch (selectedTimeRange) {
           case 'today':
             return expenseDate.isSame(now, 'day')
+          case 'yesterday':
+            return expenseDate.isSame(now.subtract(1, 'day'), 'day')
           case 'week':
             return expenseDate.isSame(now, 'week')
           case 'month':
@@ -83,7 +91,7 @@ export function ExpensesPage({
     }
 
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [expenses, selectedUserId, selectedTimeRange])
+  }, [expenses, selectedUserId, selectedTimeRange, selectedDate])
 
   // Calculate analytics for filtered expenses
   const expenseAnalytics = useMemo(() => {
@@ -195,78 +203,86 @@ export function ExpensesPage({
       <ExpenseFilters
         selectedUserId={selectedUserId}
         selectedTimeRange={selectedTimeRange}
+        selectedDate={selectedDate}
         users={users}
         onUserChange={setSelectedUserId}
         onTimeRangeChange={setSelectedTimeRange}
+        onDateChange={setSelectedDate}
       />
 
       {/* Expense Analytics */}
       <ExpenseAnalytics analytics={expenseAnalytics} />
 
       {/* Expense List */}
-      <Card>
-        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography 
-            variant="h6" 
-            gutterBottom 
-            sx={{ 
-              mb: 2,
-              fontSize: { xs: '1rem', sm: '1.25rem' }
+      <Box>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            mb: 2,
+            fontSize: { xs: '1rem', sm: '1.25rem' },
+            fontWeight: 600,
+          }}
+        >
+          {selectedTimeRange === 'custom' && selectedDate
+            ? `Expenses for ${selectedDate.format('MMM DD, YYYY')}`
+            : selectedTimeRange === 'today'
+            ? "Today's Expenses"
+            : selectedTimeRange === 'yesterday'
+            ? "Yesterday's Expenses"
+            : selectedUserId !== 'all' || selectedTimeRange !== 'all'
+            ? 'Filtered Expenses'
+            : 'Recent Expenses'}
+          {filteredExpenses.length > 0 && (
+            <Typography component="span" color="text.secondary" sx={{ ml: 1, fontWeight: 400, fontSize: '0.9rem' }}>
+              ({filteredExpenses.length})
+            </Typography>
+          )}
+        </Typography>
+
+        {filteredExpenses.length > 0 ? (
+          <Stack spacing={1.5}>
+            {filteredExpenses.map((expense) => (
+              <ExpenseCard
+                key={expense.id}
+                expense={expense}
+                onEdit={handleOpenExpenseDialog}
+                onDelete={handleDeleteClick}
+                currentUserId={currentUser.id}
+              />
+            ))}
+          </Stack>
+        ) : (
+          <Box
+            sx={{
+              p: 4,
+              borderRadius: 3,
+              border: '1px dashed',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              textAlign: 'center',
             }}
           >
-            {selectedUserId !== 'all' || selectedTimeRange !== 'all'
-              ? 'Filtered Expenses'
-              : 'Recent Expenses'}
-          </Typography>
-
-          {filteredExpenses.length > 0 ? (
-            <Box>
-              {filteredExpenses.map((expense, index, array) => (
-                <ExpenseCard
-                  key={expense.id}
-                  expense={expense}
-                  onEdit={handleOpenExpenseDialog}
-                  onDelete={handleDeleteClick}
-                  currentUserId={currentUser.id}
-                  isLast={index === array.length - 1}
-                />
-              ))}
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                p: 3,
-                borderRadius: 3,
-                border: '1px dashed',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                textAlign: 'center',
-              }}
+            <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 600 }}>
+              {selectedUserId !== 'all' || selectedTimeRange !== 'today'
+                ? 'No expenses found'
+                : 'No expenses today'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {selectedUserId !== 'all' || selectedTimeRange !== 'today'
+                ? 'Try adjusting your filters to see more expenses.'
+                : 'Start tracking your expenses to get insights into your spending habits.'}
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenExpenseDialog()}
             >
-              <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
-                {selectedUserId !== 'all' || selectedTimeRange !== 'all'
-                  ? 'No expenses found'
-                  : 'No expenses yet'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {selectedUserId !== 'all' || selectedTimeRange !== 'all'
-                  ? 'Try adjusting your filters to see more expenses.'
-                  : 'Start tracking your expenses to get insights into your spending habits.'}
-              </Typography>
-              {(selectedUserId === 'all' && selectedTimeRange === 'all') && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={() => handleOpenExpenseDialog()}
-                >
-                  Add Expense
-                </Button>
-              )}
-            </Box>
-          )}
-        </CardContent>
-      </Card>
+              Add Expense
+            </Button>
+          </Box>
+        )}
+      </Box>
 
       {/* Dialogs */}
       <ExpenseDialog

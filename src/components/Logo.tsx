@@ -1,5 +1,6 @@
 import React from 'react'
-import { Box, Typography } from '@mui/material'
+import { Box, Typography, Stack } from '@mui/material'
+import { estbelColors } from '../theme'
 
 export const MiraSyncLogo = React.memo(() => (
   <Box
@@ -13,50 +14,51 @@ export const MiraSyncLogo = React.memo(() => (
       sx={{
         width: 36,
         height: 36,
-        borderRadius: '8px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: '10px',
+        background: `linear-gradient(135deg, ${estbelColors.primary.main} 0%, ${estbelColors.primary.light} 100%)`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
+        boxShadow: `0 4px 12px ${estbelColors.primary.main}40`,
       }}
     >
-      <Box
+      {/* Stylized "E" for Estbel */}
+      <Typography
         sx={{
-          width: 20,
-          height: 20,
-          borderRadius: '50%',
-          border: '3px solid white',
-          position: 'absolute',
-          top: 8,
-          left: 8,
+          color: 'white',
+          fontWeight: 800,
+          fontSize: '1.25rem',
+          letterSpacing: '-0.05em',
         }}
-      />
-      <Box
-        sx={{
-          width: 12,
-          height: 12,
-          bgcolor: 'white',
-          borderRadius: '2px',
-          position: 'absolute',
-          bottom: 6,
-          right: 6,
-        }}
-      />
+      >
+        E
+      </Typography>
     </Box>
-    <Typography
-      variant="h6"
-      sx={{
-        fontWeight: 700,
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        letterSpacing: '-0.02em',
-      }}
-    >
-      Mira Sync
-    </Typography>
+    <Stack spacing={-0.5}>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 700,
+          color: estbelColors.text.primary,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.2,
+        }}
+      >
+        Tracker
+      </Typography>
+      <Typography
+        variant="caption"
+        sx={{
+          color: estbelColors.text.secondary,
+          fontWeight: 500,
+          letterSpacing: '0.02em',
+        }}
+      >
+        by Estbel
+      </Typography>
+    </Stack>
   </Box>
 ))
 

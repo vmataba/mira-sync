@@ -25,6 +25,8 @@ import PersonIcon from '@mui/icons-material/Person'
 import EventIcon from '@mui/icons-material/Event'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
+import PushPinIcon from '@mui/icons-material/PushPin'
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import type { Task } from '../models'
 import { formatAbbreviated, formatInputValue } from '../utils/currency'
 import { HistoryDialog } from './HistoryDialog'
@@ -36,9 +38,14 @@ interface TaskCardProps {
   onDelete?: () => void
   onIncrementProgress?: (taskId: string, increment: number, description?: string) => void
   onIncrementInvested?: (taskId: string, increment: number, description?: string) => void
+  onTogglePin?: (taskId: string, pinned: boolean) => void
+  onDeleteProgressHistory?: (taskId: string, index: number) => void
+  onClearProgressHistory?: (taskId: string) => void
+  onDeleteInvestedHistory?: (taskId: string, index: number) => void
+  onClearInvestedHistory?: (taskId: string) => void
 }
 
-export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncrementProgress, onIncrementInvested }: TaskCardProps) => {
+export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncrementProgress, onIncrementInvested, onTogglePin, onDeleteProgressHistory, onClearProgressHistory, onDeleteInvestedHistory, onClearInvestedHistory }: TaskCardProps) => {
   const [progressDialog, setProgressDialog] = useState(false)
   const [investedDialog, setInvestedDialog] = useState(false)
   const [progressValue, setProgressValue] = useState('')
@@ -101,6 +108,31 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
       data-testid="task-item"
     >
       <CardContent sx={{ pt: { xs: 5, sm: 5 }, pb: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 2.5 }, position: 'relative' }}>
+        {/* Pinned Badge */}
+        {task.pinned && task.progress < 100 && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: -12,
+              left: 16,
+              bgcolor: 'primary.main',
+              color: 'white',
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+            }}
+          >
+            <PushPinIcon sx={{ fontSize: 14 }} />
+            PINNED
+          </Box>
+        )}
+
         {/* Completion Badge */}
         {task.progress >= 100 && (
           <Box
@@ -156,7 +188,7 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
           </Box>
         )}
 
-        {(onEdit || onDelete) && (
+        {(onEdit || onDelete || onTogglePin) && (
           <Stack
             direction="row"
             spacing={0.5}
@@ -167,6 +199,29 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
               zIndex: 1,
             }}
           >
+            {onTogglePin && (
+              <Tooltip title={task.pinned ? 'Unpin task' : 'Pin task'} arrow>
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onTogglePin(task.id, !task.pinned)
+                  }}
+                  size="small"
+                  sx={{
+                    bgcolor: task.pinned ? 'primary.main' : 'background.paper',
+                    color: task.pinned ? 'white' : 'text.secondary',
+                    boxShadow: 1,
+                    '&:hover': {
+                      bgcolor: task.pinned ? 'primary.dark' : 'primary.light',
+                      color: 'white',
+                    },
+                  }}
+                  aria-label={task.pinned ? 'Unpin task' : 'Pin task'}
+                >
+                  {task.pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            )}
             {onEdit && (
               <IconButton
                 onClick={(e) => {
@@ -529,6 +584,8 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
       title="Progress History"
       history={task.progressHistory || []}
       type="progress"
+      onDeleteEntry={onDeleteProgressHistory ? (index) => onDeleteProgressHistory(task.id, index) : undefined}
+      onClearHistory={onClearProgressHistory ? () => onClearProgressHistory(task.id) : undefined}
     />
 
     {/* Invested History Dialog */}
@@ -538,6 +595,8 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
       title="Investment History"
       history={task.investedHistory || []}
       type="invested"
+      onDeleteEntry={onDeleteInvestedHistory ? (index) => onDeleteInvestedHistory(task.id, index) : undefined}
+      onClearHistory={onClearInvestedHistory ? () => onClearInvestedHistory(task.id) : undefined}
     />
     
     {/* Progress Increment Dialog */}

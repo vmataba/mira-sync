@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Provider } from 'react-redux'
 import {
   AppBar,
   Avatar,
@@ -29,7 +30,6 @@ import {
   ThemeProvider,
   Toolbar,
   Typography,
-  createTheme,
   useMediaQuery,
 } from '@mui/material'
 import dayjs, { Dayjs } from 'dayjs'
@@ -42,178 +42,24 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek'
 import AssignmentIcon from '@mui/icons-material/Assignment'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import type { Assignment, Priority, Sprint, Task, TaskType, Expense } from './models'
 import { MiraSyncLogo } from './components/Logo'
 import { TaskCard } from './components/TaskCard'
 import { TaskDialog } from './components/TaskDialog'
 import { MemberDialog } from './components/MemberDialog'
 import { LoginScreen } from './components/LoginScreen'
+import { CommandCenter } from './components/CommandCenter'
 import { ExpensesPage } from './pages/ExpensesPage'
 import type { AuthUser } from './auth/authService'
 import { taskService, sprintService, userService, expenseService, initializeFirestore } from './services/firestoreService'
 import { firebaseAuthService } from './services/firebaseAuthService'
 import { parseFormattedNumber, formatInputValue } from './utils/currency'
+import { estbelTheme, estbelColors } from './theme'
+import { store, EstbelDashboard } from './estbel'
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#6366f1',
-      light: '#818cf8',
-      dark: '#4f46e5',
-    },
-    secondary: {
-      main: '#ec4899',
-      light: '#f472b6',
-      dark: '#db2777',
-    },
-    success: {
-      main: '#10b981',
-      light: '#34d399',
-      dark: '#059669',
-    },
-    warning: {
-      main: '#f59e0b',
-      light: '#fbbf24',
-      dark: '#d97706',
-    },
-    error: {
-      main: '#ef4444',
-      light: '#f87171',
-      dark: '#dc2626',
-    },
-    background: {
-      default: '#f8fafc',
-      paper: '#ffffff',
-    },
-    text: {
-      primary: '#0f172a',
-      secondary: '#64748b',
-    },
-    divider: '#e2e8f0',
-  },
-  shape: {
-    borderRadius: 8,
-  },
-  typography: {
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif',
-    h4: {
-      fontWeight: 700,
-      letterSpacing: '-0.02em',
-      fontSize: '1.75rem',
-      '@media (max-width:600px)': {
-        fontSize: '1.5rem',
-      },
-    },
-    h5: {
-      fontWeight: 700,
-      letterSpacing: '-0.01em',
-      fontSize: '1.5rem',
-      '@media (max-width:600px)': {
-        fontSize: '1.25rem',
-      },
-    },
-    h6: {
-      fontWeight: 600,
-      letterSpacing: '-0.01em',
-      fontSize: '1.125rem',
-      '@media (max-width:600px)': {
-        fontSize: '1rem',
-      },
-    },
-    subtitle1: {
-      fontWeight: 600,
-      letterSpacing: '0em',
-      fontSize: '1rem',
-      '@media (max-width:600px)': {
-        fontSize: '0.875rem',
-      },
-    },
-    subtitle2: {
-      fontWeight: 600,
-      letterSpacing: '0.02em',
-      textTransform: 'uppercase',
-      fontSize: '0.75rem',
-    },
-    body1: {
-      letterSpacing: '0em',
-      fontSize: '0.875rem',
-    },
-    body2: {
-      letterSpacing: '0em',
-      fontSize: '0.8125rem',
-    },
-    button: {
-      fontWeight: 600,
-      textTransform: 'none',
-      letterSpacing: '0.01em',
-      fontSize: '0.875rem',
-    },
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          padding: '10px 20px',
-          boxShadow: 'none',
-          '&:hover': {
-            boxShadow: 'none',
-          },
-        },
-        contained: {
-          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-          '&:hover': {
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-          },
-        },
-        outlined: {
-          borderWidth: 1.5,
-          '&:hover': {
-            borderWidth: 1.5,
-            backgroundColor: 'rgba(99, 102, 241, 0.04)',
-          },
-        },
-        sizeSmall: {
-          padding: '6px 14px',
-          fontSize: '0.8125rem',
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-          border: '1px solid #e2e8f0',
-          borderRadius: 12,
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          fontWeight: 500,
-          borderRadius: 6,
-          fontSize: '0.75rem',
-          letterSpacing: '0.01em',
-        },
-      },
-    },
-    MuiTab: {
-      styleOverrides: {
-        root: {
-          fontWeight: 600,
-          textTransform: 'none',
-          letterSpacing: '0.01em',
-          fontSize: '0.875rem',
-          '@media (max-width:600px)': {
-            fontSize: '0.8125rem',
-            minWidth: 80,
-          },
-        },
-      },
-    },
-  },
-})
+// Use the new Estbel Banking-Grade theme
+const theme = estbelTheme
 
 // Default sprint will be loaded from Firebase
 const defaultSprint: Sprint = {
@@ -251,9 +97,13 @@ const emptyTaskForm: TaskFormState = {
   invested: '',
 }
 
+// App Module type for Command Center navigation
+type AppModule = 'command-center' | 'tracker' | 'estbel'
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(firebaseAuthService.isAuthenticated())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(firebaseAuthService.getCurrentUser())
+  const [activeModule, setActiveModule] = useState<AppModule>('command-center')
   const [tasks, setTasks] = useState<Task[]>([])
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [selectedSprintId, setSelectedSprintId] = useState<string>('')
@@ -356,11 +206,15 @@ function App() {
       filtered = filtered.filter((t) => t.assignee?.id === filterAssigneeId)
     }
     
-    // Sort by priority (high > medium > low) then by deadline (earliest first)
+    // Sort by: pinned first, then priority (high > medium > low), then by deadline (earliest first)
     const priorityOrder = { high: 0, medium: 1, low: 2 }
     
     return filtered.sort((a, b) => {
-      // First, sort by priority
+      // First, sort by pinned status (pinned tasks come first)
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+      
+      // Then, sort by priority
       const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority]
       if (priorityDiff !== 0) return priorityDiff
       
@@ -824,6 +678,112 @@ function App() {
     }
   }
 
+  const handleTogglePin = async (taskId: string, pinned: boolean) => {
+    try {
+      await taskService.updateTask(taskId, { pinned })
+      setSnackbar({ open: true, message: pinned ? 'Task pinned' : 'Task unpinned', severity: 'success' })
+    } catch (error) {
+      console.error('Error toggling pin:', error)
+      setSnackbar({ open: true, message: 'Failed to update task', severity: 'error' })
+    }
+  }
+
+  const handleDeleteProgressHistory = async (taskId: string, index: number) => {
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task || !task.progressHistory) return
+
+    const newHistory = [...task.progressHistory]
+    newHistory.splice(index, 1)
+
+    // Get the latest progress value from remaining history, or 0 if empty
+    let newProgress = 0
+    if (newHistory.length > 0) {
+      // Sort by timestamp descending to get the most recent entry
+      const sortedHistory = [...newHistory].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+      newProgress = sortedHistory[0].value
+    }
+
+    try {
+      await taskService.updateTask(taskId, { progressHistory: newHistory, progress: newProgress })
+      setSnackbar({ open: true, message: 'History entry deleted, progress updated', severity: 'success' })
+    } catch (error) {
+      console.error('Error deleting history entry:', error)
+      setSnackbar({ open: true, message: 'Failed to delete history entry', severity: 'error' })
+    }
+  }
+
+  const handleClearProgressHistory = async (taskId: string) => {
+    try {
+      // Reset progress to 0 when clearing all history
+      await taskService.updateTask(taskId, { progressHistory: [], progress: 0 })
+      setSnackbar({ open: true, message: 'Progress history cleared, progress reset to 0', severity: 'success' })
+    } catch (error) {
+      console.error('Error clearing history:', error)
+      setSnackbar({ open: true, message: 'Failed to clear history', severity: 'error' })
+    }
+  }
+
+  const handleDeleteInvestedHistory = async (taskId: string, index: number) => {
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task || !task.investedHistory || !task.monetary) return
+
+    const newHistory = [...task.investedHistory]
+    newHistory.splice(index, 1)
+
+    // Get the latest invested value from remaining history, or 0 if empty
+    let newInvested = 0
+    if (newHistory.length > 0) {
+      // Sort by timestamp descending to get the most recent entry
+      const sortedHistory = [...newHistory].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+      newInvested = sortedHistory[0].value
+    }
+
+    // Recalculate progress based on new invested amount
+    const newProgress = task.monetary.amount > 0 
+      ? Math.min(100, Math.round((newInvested / task.monetary.amount) * 100))
+      : 0
+
+    try {
+      await taskService.updateTask(taskId, { 
+        investedHistory: newHistory,
+        monetary: {
+          ...task.monetary,
+          invested: newInvested,
+        },
+        progress: newProgress,
+      })
+      setSnackbar({ open: true, message: 'History entry deleted, invested amount updated', severity: 'success' })
+    } catch (error) {
+      console.error('Error deleting history entry:', error)
+      setSnackbar({ open: true, message: 'Failed to delete history entry', severity: 'error' })
+    }
+  }
+
+  const handleClearInvestedHistory = async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task || !task.monetary) return
+
+    try {
+      // Reset invested to 0 and progress to 0 when clearing all history
+      await taskService.updateTask(taskId, { 
+        investedHistory: [],
+        monetary: {
+          ...task.monetary,
+          invested: 0,
+        },
+        progress: 0,
+      })
+      setSnackbar({ open: true, message: 'Investment history cleared, invested reset to 0', severity: 'success' })
+    } catch (error) {
+      console.error('Error clearing history:', error)
+      setSnackbar({ open: true, message: 'Failed to clear history', severity: 'error' })
+    }
+  }
+
   const handleSetActivePlanWindow = async (sprintId: string) => {
     try {
       await sprintService.setActiveSprint(sprintId)
@@ -881,45 +841,87 @@ function App() {
 
   if (loading) {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box
-          sx={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: 'background.default',
-          }}
-        >
-          <Stack spacing={2} alignItems="center">
-            <MiraSyncLogo />
-            <Typography variant="body1" color="text.secondary">
-              Loading...
-            </Typography>
-          </Stack>
-        </Box>
-      </ThemeProvider>
+      <Provider store={store}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Box
+            sx={{
+              minHeight: '100vh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'background.default',
+            }}
+          >
+            <Stack spacing={2} alignItems="center">
+              <MiraSyncLogo />
+              <Typography variant="body1" color="text.secondary">
+                Loading...
+              </Typography>
+            </Stack>
+          </Box>
+        </ThemeProvider>
+      </Provider>
     )
   }
 
+  // Command Center - Entry Dashboard
+  if (activeModule === 'command-center') {
+    return (
+      <Provider store={store}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <CommandCenter
+            userName={currentUser?.name || 'User'}
+            onSelectModule={(module) => setActiveModule(module)}
+          />
+        </ThemeProvider>
+      </Provider>
+    )
+  }
+
+  // Estbel Module - Professional Cash Flow
+  if (activeModule === 'estbel' && currentUser) {
+    return (
+      <Provider store={store}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <EstbelDashboard
+            currentUser={currentUser}
+            onBack={() => setActiveModule('command-center')}
+          />
+        </ThemeProvider>
+      </Provider>
+    )
+  }
+
+  // Tracker Module - Tasks & Expenses (existing functionality)
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AppBar
-        position="static"
-        color="default"
-        elevation={0}
-        sx={{
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          bgcolor: '#ffffff',
-        }}
-      >
-        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 }, px: { xs: 2, sm: 3 } }}>
-          <Box sx={{ flexGrow: 1 }}>
-            <MiraSyncLogo />
-          </Box>
+    <Provider store={store}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppBar
+          position="static"
+          color="default"
+          elevation={0}
+          sx={{
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: estbelColors.background.paper,
+          }}
+        >
+          <Toolbar sx={{ minHeight: { xs: 56, sm: 64 }, px: { xs: 2, sm: 3 } }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <IconButton
+                onClick={() => setActiveModule('command-center')}
+                sx={{ color: 'text.secondary' }}
+                size="small"
+              >
+                <ArrowBackIcon />
+              </IconButton>
+              <MiraSyncLogo />
+            </Stack>
+            <Box sx={{ flexGrow: 1 }} />
           <Stack direction="row" spacing={1} alignItems="center">
             {currentUser && (
               <Avatar
@@ -1077,7 +1079,7 @@ function App() {
             {activePlanWindow && (
               <Card
                 sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: `linear-gradient(135deg, ${estbelColors.primary.main} 0%, ${estbelColors.primary.light} 100%)`,
                   color: 'white',
                   border: 'none',
                   boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
@@ -1445,7 +1447,7 @@ function App() {
           <Stack spacing={3}>
             <Card
               sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: `linear-gradient(135deg, ${estbelColors.primary.main} 0%, ${estbelColors.primary.light} 100%)`,
                 color: 'white',
                 border: 'none',
               }}
@@ -1576,6 +1578,11 @@ function App() {
                           onDelete={() => handleDeleteTask(task.id)}
                           onIncrementProgress={handleIncrementProgress}
                           onIncrementInvested={handleIncrementInvested}
+                          onTogglePin={handleTogglePin}
+                          onDeleteProgressHistory={handleDeleteProgressHistory}
+                          onClearProgressHistory={handleClearProgressHistory}
+                          onDeleteInvestedHistory={handleDeleteInvestedHistory}
+                          onClearInvestedHistory={handleClearInvestedHistory}
                         />
                       ))}
                     </Stack>
@@ -1598,6 +1605,11 @@ function App() {
                           onDelete={() => handleDeleteTask(task.id)}
                           onIncrementProgress={handleIncrementProgress}
                           onIncrementInvested={handleIncrementInvested}
+                          onTogglePin={handleTogglePin}
+                          onDeleteProgressHistory={handleDeleteProgressHistory}
+                          onClearProgressHistory={handleClearProgressHistory}
+                          onDeleteInvestedHistory={handleDeleteInvestedHistory}
+                          onClearInvestedHistory={handleClearInvestedHistory}
                         />
                       ))}
                     </Stack>
@@ -1729,7 +1741,8 @@ function App() {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </ThemeProvider>
+      </ThemeProvider>
+    </Provider>
   )
 }
 

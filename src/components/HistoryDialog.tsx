@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -10,10 +10,14 @@ import {
   Typography,
   Box,
   Chip,
+  Button,
+  Tooltip,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
+import DeleteIcon from '@mui/icons-material/Delete'
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
 import type { HistoryEntry } from '../models'
 import { formatAbbreviated } from '../utils/currency'
 
@@ -23,6 +27,8 @@ interface HistoryDialogProps {
   title: string
   history: HistoryEntry[]
   type: 'progress' | 'invested'
+  onDeleteEntry?: (index: number) => void
+  onClearHistory?: () => void
 }
 
 export const HistoryDialog: React.FC<HistoryDialogProps> = ({
@@ -31,10 +37,19 @@ export const HistoryDialog: React.FC<HistoryDialogProps> = ({
   title,
   history,
   type,
+  onDeleteEntry,
+  onClearHistory,
 }) => {
+  const [confirmClear, setConfirmClear] = useState(false)
+  
   const sortedHistory = [...history].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   )
+  
+  const getOriginalIndex = (sortedIndex: number) => {
+    const entry = sortedHistory[sortedIndex]
+    return history.findIndex(h => h.timestamp === entry.timestamp && h.value === entry.value)
+  }
 
   const formatValue = (value: number) => {
     if (type === 'progress') {
@@ -50,14 +65,42 @@ export const HistoryDialog: React.FC<HistoryDialogProps> = ({
     return current > previous ? 'up' : current < previous ? 'down' : 'same'
   }
 
+  const handleClearHistory = () => {
+    if (confirmClear && onClearHistory) {
+      onClearHistory()
+      setConfirmClear(false)
+    } else {
+      setConfirmClear(true)
+    }
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={() => { onClose(); setConfirmClear(false) }} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6">{title}</Typography>
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {onClearHistory && sortedHistory.length > 0 && (
+              <Tooltip title={confirmClear ? 'Click again to confirm' : 'Clear all history'} arrow>
+                <Button
+                  size="small"
+                  color={confirmClear ? 'error' : 'inherit'}
+                  variant={confirmClear ? 'contained' : 'text'}
+                  startIcon={<DeleteSweepIcon />}
+                  onClick={handleClearHistory}
+                  sx={{ 
+                    minWidth: 'auto',
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  {confirmClear ? 'Confirm' : 'Clear'}
+                </Button>
+              </Tooltip>
+            )}
+            <IconButton onClick={() => { onClose(); setConfirmClear(false) }} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </Box>
       </DialogTitle>
       <DialogContent dividers>
@@ -69,6 +112,7 @@ export const HistoryDialog: React.FC<HistoryDialogProps> = ({
           <List sx={{ p: 0 }}>
             {sortedHistory.map((entry, index) => {
               const trend = getTrend(index)
+              const originalIndex = getOriginalIndex(index)
               return (
                 <ListItem
                   key={index}
@@ -77,10 +121,30 @@ export const HistoryDialog: React.FC<HistoryDialogProps> = ({
                     borderColor: 'divider',
                     py: 2,
                   }}
+                  secondaryAction={
+                    onDeleteEntry && (
+                      <Tooltip title="Delete this entry" arrow>
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          onClick={() => onDeleteEntry(originalIndex)}
+                          sx={{
+                            color: 'text.secondary',
+                            '&:hover': {
+                              color: 'error.main',
+                              bgcolor: 'error.lighter',
+                            },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )
+                  }
                 >
                   <ListItemText
                     primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', pr: onDeleteEntry ? 4 : 0 }}>
                         <Typography variant="body1" fontWeight={600}>
                           {formatValue(entry.value)}
                         </Typography>
@@ -101,7 +165,7 @@ export const HistoryDialog: React.FC<HistoryDialogProps> = ({
                       </Box>
                     }
                     secondary={
-                      <Box sx={{ mt: 0.5 }}>
+                      <Box sx={{ mt: 0.5, pr: onDeleteEntry ? 4 : 0 }}>
                         {entry.note && entry.note.includes(' - ') && (
                           <Typography 
                             variant="body2" 

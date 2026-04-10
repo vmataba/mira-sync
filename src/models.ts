@@ -43,6 +43,7 @@ export interface Task {
   monetary?: MonetaryInfo
   progressHistory?: HistoryEntry[]
   investedHistory?: HistoryEntry[]
+  pinned?: boolean // Pinned tasks appear at the top
 }
 
 export interface Expense {
