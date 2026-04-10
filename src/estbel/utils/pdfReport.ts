@@ -9,14 +9,13 @@ interface ReportOptions {
   generatedBy: string
 }
 
-// Format date for display
+// Format date for display (DD/MM/YYYY)
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr)
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  const day = date.getDate().toString().padStart(2, '0')
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const year = date.getFullYear()
+  return `${day}/${month}/${year}`
 }
 
 // Format number with thousand separators
@@ -27,6 +26,20 @@ const formatNumber = (num: number): string => {
 export function generatePDFReport(options: ReportOptions): jsPDF {
   const { scheme, transactions, dateRange, generatedBy } = options
   const doc = new jsPDF()
+  
+  // Calculate totals from filtered transactions (not scheme totals)
+  const totals = transactions.reduce(
+    (acc, tx) => {
+      if (tx.type === 'in') {
+        acc.totalIn += tx.total
+      } else {
+        acc.totalOut += tx.total
+      }
+      return acc
+    },
+    { totalIn: 0, totalOut: 0 }
+  )
+  const balance = totals.totalIn - totals.totalOut
   
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 20
@@ -74,14 +87,24 @@ export function generatePDFReport(options: ReportOptions): jsPDF {
   
   // Date range if provided
   if (dateRange?.startDate && dateRange?.endDate) {
-    doc.text(`Period: ${formatDate(dateRange.startDate)} - ${formatDate(dateRange.endDate)}`, margin + 10, yPos)
+    const startFormatted = formatDate(dateRange.startDate)
+    const endFormatted = formatDate(dateRange.endDate)
+    if (dateRange.startDate === dateRange.endDate) {
+      doc.text(`Period: ${startFormatted}`, margin + 10, yPos)
+    } else {
+      doc.text(`Period: ${startFormatted} - ${endFormatted}`, margin + 10, yPos)
+    }
+  } else if (dateRange?.startDate) {
+    doc.text(`From: ${formatDate(dateRange.startDate)}`, margin + 10, yPos)
+  } else if (dateRange?.endDate) {
+    doc.text(`Until: ${formatDate(dateRange.endDate)}`, margin + 10, yPos)
   } else {
     doc.text(`All transactions`, margin + 10, yPos)
   }
   
   yPos += 20
 
-  // Summary Cards
+  // Summary Cards - using calculated totals from filtered transactions
   const cardWidth = (pageWidth - margin * 2 - 20) / 3
   const cardHeight = 30
   
@@ -91,10 +114,10 @@ export function generatePDFReport(options: ReportOptions): jsPDF {
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
-  doc.text('BALANCE', margin + 8, yPos + 10)
+  doc.text('NET BALANCE', margin + 8, yPos + 10)
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
-  doc.text(`TZS ${formatNumber(scheme.balance)}`, margin + 8, yPos + 22)
+  doc.text(`TZS ${formatNumber(balance)}`, margin + 8, yPos + 22)
   
   // Cash In Card
   doc.setFillColor(0, 200, 83) // Success
@@ -105,7 +128,7 @@ export function generatePDFReport(options: ReportOptions): jsPDF {
   doc.text('TOTAL IN', margin + cardWidth + 18, yPos + 10)
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
-  doc.text(`TZS ${formatNumber(scheme.totalIn)}`, margin + cardWidth + 18, yPos + 22)
+  doc.text(`TZS ${formatNumber(totals.totalIn)}`, margin + cardWidth + 18, yPos + 22)
   
   // Cash Out Card
   doc.setFillColor(211, 47, 47) // Error
@@ -116,7 +139,7 @@ export function generatePDFReport(options: ReportOptions): jsPDF {
   doc.text('TOTAL OUT', margin + (cardWidth + 10) * 2 + 8, yPos + 10)
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
-  doc.text(`TZS ${formatNumber(scheme.totalOut)}`, margin + (cardWidth + 10) * 2 + 8, yPos + 22)
+  doc.text(`TZS ${formatNumber(totals.totalOut)}`, margin + (cardWidth + 10) * 2 + 8, yPos + 22)
   
   yPos += cardHeight + 15
 
@@ -217,16 +240,46 @@ export function downloadPDF(options: ReportOptions): void {
 
 // Share via WhatsApp using Web Share API
 export async function shareViaWhatsApp(options: ReportOptions): Promise<boolean> {
+  const { scheme, transactions, dateRange } = options
+  
+  // Calculate totals from filtered transactions
+  const totals = transactions.reduce(
+    (acc, tx) => {
+      if (tx.type === 'in') {
+        acc.totalIn += tx.total
+      } else {
+        acc.totalOut += tx.total
+      }
+      return acc
+    },
+    { totalIn: 0, totalOut: 0 }
+  )
+  const balance = totals.totalIn - totals.totalOut
+  
+  // Format period string
+  let periodStr = 'All time'
+  if (dateRange?.startDate && dateRange?.endDate) {
+    if (dateRange.startDate === dateRange.endDate) {
+      periodStr = formatDate(dateRange.startDate)
+    } else {
+      periodStr = `${formatDate(dateRange.startDate)} - ${formatDate(dateRange.endDate)}`
+    }
+  } else if (dateRange?.startDate) {
+    periodStr = `From ${formatDate(dateRange.startDate)}`
+  } else if (dateRange?.endDate) {
+    periodStr = `Until ${formatDate(dateRange.endDate)}`
+  }
+  
   const doc = generatePDFReport(options)
   const pdfBlob = doc.output('blob')
-  const fileName = `estbel-${options.scheme.name.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
+  const fileName = `estbel-${scheme.name.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
   
   // Check if Web Share API is available
   if (navigator.share && navigator.canShare) {
     const file = new File([pdfBlob], fileName, { type: 'application/pdf' })
     const shareData = {
-      title: `Estbel Statement - ${options.scheme.name}`,
-      text: `Cash flow statement for ${options.scheme.name}. Balance: TZS ${formatNumber(options.scheme.balance)}`,
+      title: `Estbel Statement - ${scheme.name}`,
+      text: `Cash flow statement for ${scheme.name}. Period: ${periodStr}. Net Balance: TZS ${formatNumber(balance)}`,
       files: [file],
     }
     
@@ -246,11 +299,12 @@ export async function shareViaWhatsApp(options: ReportOptions): Promise<boolean>
   // Fallback: Open WhatsApp with a message (without file)
   const message = encodeURIComponent(
     `📊 *Estbel Statement*\n\n` +
-    `*Scheme:* ${options.scheme.name}\n` +
-    `*Balance:* TZS ${formatNumber(options.scheme.balance)}\n` +
-    `*Total In:* TZS ${formatNumber(options.scheme.totalIn)}\n` +
-    `*Total Out:* TZS ${formatNumber(options.scheme.totalOut)}\n` +
-    `*Transactions:* ${options.transactions.length}\n\n` +
+    `*Scheme:* ${scheme.name}\n` +
+    `*Period:* ${periodStr}\n` +
+    `*Net Balance:* TZS ${formatNumber(balance)}\n` +
+    `*Total In:* TZS ${formatNumber(totals.totalIn)}\n` +
+    `*Total Out:* TZS ${formatNumber(totals.totalOut)}\n` +
+    `*Transactions:* ${transactions.length}\n\n` +
     `_Generated by Estbel Suite_`
   )
   

@@ -8,12 +8,15 @@ import {
   Stack,
   Box,
   Typography,
-  TextField,
   ToggleButton,
   ToggleButtonGroup,
   alpha,
   Divider,
 } from '@mui/material'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import ShareIcon from '@mui/icons-material/Share'
 import DateRangeIcon from '@mui/icons-material/DateRange'
@@ -198,57 +201,53 @@ export const ReportDialog = React.memo(({
 
           {/* Custom Date Range */}
           {selectedPreset === 'custom' && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <TextField
-                type="date"
-                size="small"
-                label="From"
-                value={customRange.startDate || ''}
-                onChange={(e) => setCustomRange({ ...customRange, startDate: e.target.value || null })}
-                InputLabelProps={{ shrink: true }}
-                sx={{ 
-                  flex: 1,
-                  '& .MuiInputBase-root': { 
-                    fontSize: '0.8rem',
-                    borderRadius: 1.5,
-                    bgcolor: alpha(scheme.color, 0.04),
-                  },
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: alpha(scheme.color, 0.3),
-                  },
-                  '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                    cursor: 'pointer',
-                    opacity: 0.7,
-                    '&:hover': { opacity: 1 },
-                  },
-                }}
-              />
-              <Typography variant="caption" color="text.secondary">—</Typography>
-              <TextField
-                type="date"
-                size="small"
-                label="To"
-                value={customRange.endDate || ''}
-                onChange={(e) => setCustomRange({ ...customRange, endDate: e.target.value || null })}
-                InputLabelProps={{ shrink: true }}
-                sx={{ 
-                  flex: 1,
-                  '& .MuiInputBase-root': { 
-                    fontSize: '0.8rem',
-                    borderRadius: 1.5,
-                    bgcolor: alpha(scheme.color, 0.04),
-                  },
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: alpha(scheme.color, 0.3),
-                  },
-                  '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                    cursor: 'pointer',
-                    opacity: 0.7,
-                    '&:hover': { opacity: 1 },
-                  },
-                }}
-              />
-            </Stack>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <DatePicker
+                  label="From"
+                  value={customRange.startDate ? dayjs(customRange.startDate) : null}
+                  onChange={(date) => setCustomRange({ 
+                    ...customRange, 
+                    startDate: date ? date.format('YYYY-MM-DD') : null 
+                  })}
+                  format="DD/MM/YYYY"
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      sx: { 
+                        flex: 1,
+                        '& .MuiInputBase-root': { 
+                          fontSize: '0.85rem',
+                          borderRadius: 2,
+                        },
+                      },
+                    },
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary">—</Typography>
+                <DatePicker
+                  label="To"
+                  value={customRange.endDate ? dayjs(customRange.endDate) : null}
+                  onChange={(date) => setCustomRange({ 
+                    ...customRange, 
+                    endDate: date ? date.format('YYYY-MM-DD') : null 
+                  })}
+                  format="DD/MM/YYYY"
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      sx: { 
+                        flex: 1,
+                        '& .MuiInputBase-root': { 
+                          fontSize: '0.85rem',
+                          borderRadius: 2,
+                        },
+                      },
+                    },
+                  }}
+                />
+              </Stack>
+            </LocalizationProvider>
           )}
 
           <Divider />

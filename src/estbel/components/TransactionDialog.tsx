@@ -17,6 +17,10 @@ import {
   MenuItem,
   alpha,
 } from '@mui/material'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import type { TransactionFormData, Scheme, Transaction } from '../types'
@@ -205,30 +209,26 @@ export const TransactionDialog = React.memo(({
             />
           </Stack>
 
-          {/* Date - styled */}
-          <TextField
-            label="Date"
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            fullWidth
-            size="small"
-            InputLabelProps={{ shrink: true }}
-            sx={{
-              '& .MuiInputBase-root': {
-                borderRadius: 1.5,
-                bgcolor: alpha(typeColor, 0.04),
-              },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: alpha(typeColor, 0.2),
-              },
-              '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                cursor: 'pointer',
-                opacity: 0.7,
-                '&:hover': { opacity: 1 },
-              },
-            }}
-          />
+          {/* Date - MUI DatePicker */}
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              label="Date"
+              value={form.date ? dayjs(form.date) : null}
+              onChange={(date) => setForm({ ...form, date: date ? date.format('YYYY-MM-DD') : '' })}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  fullWidth: true,
+                  sx: {
+                    '& .MuiInputBase-root': {
+                      borderRadius: 2,
+                    },
+                  },
+                },
+              }}
+            />
+          </LocalizationProvider>
 
           {/* Description - compact */}
           <TextField

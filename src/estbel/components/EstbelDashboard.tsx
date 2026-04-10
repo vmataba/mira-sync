@@ -22,6 +22,10 @@ import {
   Alert,
   Chip,
 } from '@mui/material'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import dayjs from 'dayjs'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SearchIcon from '@mui/icons-material/Search'
@@ -29,7 +33,6 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import { SchemeCard } from './SchemeCard'
 import { SchemeDialog } from './SchemeDialog'
 import { TransactionCard } from './TransactionCard'
@@ -481,80 +484,67 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
           </Stack>
           
           {/* Date filters row */}
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CalendarTodayIcon sx={{ fontSize: 16, color: estbelColors.primary.main }} />
-            <TextField
-              type="date"
-              size="small"
-              label="From"
-              value={filters.dateRange.startDate || ''}
-              onChange={(e) => updateFilters({ 
-                dateRange: { ...filters.dateRange, startDate: e.target.value || null } 
-              })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ 
-                flex: 1,
-                '& .MuiInputBase-root': { 
-                  height: 36,
-                  fontSize: '0.8rem',
-                  borderRadius: 1.5,
-                  bgcolor: alpha(estbelColors.primary.main, 0.04),
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: alpha(estbelColors.primary.main, 0.2),
-                },
-                '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                  cursor: 'pointer',
-                  opacity: 0.7,
-                  filter: 'invert(0.3)',
-                  '&:hover': { opacity: 1 },
-                },
-              }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ px: 0.5 }}>—</Typography>
-            <TextField
-              type="date"
-              size="small"
-              label="To"
-              value={filters.dateRange.endDate || ''}
-              onChange={(e) => updateFilters({ 
-                dateRange: { ...filters.dateRange, endDate: e.target.value || null } 
-              })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ 
-                flex: 1,
-                '& .MuiInputBase-root': { 
-                  height: 36,
-                  fontSize: '0.8rem',
-                  borderRadius: 1.5,
-                  bgcolor: alpha(estbelColors.primary.main, 0.04),
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: alpha(estbelColors.primary.main, 0.2),
-                },
-                '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                  cursor: 'pointer',
-                  opacity: 0.7,
-                  filter: 'invert(0.3)',
-                  '&:hover': { opacity: 1 },
-                },
-              }}
-            />
-            {(filters.dateRange.startDate || filters.dateRange.endDate) && (
-              <Button 
-                size="small" 
-                onClick={() => updateFilters({ dateRange: { startDate: null, endDate: null } })}
-                sx={{ 
-                  minWidth: 'auto',
-                  px: 1,
-                  fontSize: '0.7rem',
-                  textTransform: 'none',
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <DatePicker
+                label="From"
+                value={filters.dateRange.startDate ? dayjs(filters.dateRange.startDate) : null}
+                onChange={(date) => updateFilters({ 
+                  dateRange: { ...filters.dateRange, startDate: date ? date.format('YYYY-MM-DD') : null } 
+                })}
+                format="DD/MM/YYYY"
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: { 
+                      flex: 1,
+                      '& .MuiInputBase-root': { 
+                        height: 40,
+                        fontSize: '0.85rem',
+                        borderRadius: 2,
+                      },
+                    },
+                  },
                 }}
-              >
-                Clear
-              </Button>
-            )}
-          </Stack>
+              />
+              <Typography variant="caption" color="text.secondary">—</Typography>
+              <DatePicker
+                label="To"
+                value={filters.dateRange.endDate ? dayjs(filters.dateRange.endDate) : null}
+                onChange={(date) => updateFilters({ 
+                  dateRange: { ...filters.dateRange, endDate: date ? date.format('YYYY-MM-DD') : null } 
+                })}
+                format="DD/MM/YYYY"
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: { 
+                      flex: 1,
+                      '& .MuiInputBase-root': { 
+                        height: 40,
+                        fontSize: '0.85rem',
+                        borderRadius: 2,
+                      },
+                    },
+                  },
+                }}
+              />
+              {(filters.dateRange.startDate || filters.dateRange.endDate) && (
+                <Button 
+                  size="small" 
+                  onClick={() => updateFilters({ dateRange: { startDate: null, endDate: null } })}
+                  sx={{ 
+                    minWidth: 'auto',
+                    px: 1.5,
+                    fontSize: '0.75rem',
+                    textTransform: 'none',
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </Stack>
+          </LocalizationProvider>
         </Stack>
       </Box>
 
