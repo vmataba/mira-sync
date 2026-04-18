@@ -27,7 +27,9 @@ export function generatePDFReport(options: ReportOptions): jsPDF {
   const { scheme, transactions, dateRange, generatedBy } = options
   const doc = new jsPDF()
   
-  // Calculate totals from filtered transactions (not scheme totals)
+  // Use scheme's stored balance (matches dashboard) as source of truth
+  const balance = scheme.balance
+  // Calculate period totals from filtered transactions for In/Out cards
   const totals = transactions.reduce(
     (acc, tx) => {
       if (tx.type === 'in') {
@@ -39,7 +41,6 @@ export function generatePDFReport(options: ReportOptions): jsPDF {
     },
     { totalIn: 0, totalOut: 0 }
   )
-  const balance = totals.totalIn - totals.totalOut
   
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 20
@@ -114,7 +115,7 @@ export function generatePDFReport(options: ReportOptions): jsPDF {
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
-  doc.text('NET BALANCE', margin + 8, yPos + 10)
+  doc.text('CURRENT BALANCE', margin + 8, yPos + 10)
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   doc.text(`TZS ${formatNumber(balance)}`, margin + 8, yPos + 22)
@@ -242,7 +243,9 @@ export function downloadPDF(options: ReportOptions): void {
 export async function shareViaWhatsApp(options: ReportOptions): Promise<boolean> {
   const { scheme, transactions, dateRange } = options
   
-  // Calculate totals from filtered transactions
+  // Use scheme's stored balance (matches dashboard) as source of truth
+  const balance = scheme.balance
+  // Calculate period totals from filtered transactions for summary text
   const totals = transactions.reduce(
     (acc, tx) => {
       if (tx.type === 'in') {
@@ -254,7 +257,6 @@ export async function shareViaWhatsApp(options: ReportOptions): Promise<boolean>
     },
     { totalIn: 0, totalOut: 0 }
   )
-  const balance = totals.totalIn - totals.totalOut
   
   // Format period string
   let periodStr = 'All time'

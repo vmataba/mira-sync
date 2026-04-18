@@ -323,18 +323,18 @@ export const ReportDialog = React.memo(({
               >
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="caption" color="text.secondary">
-                    Net Balance
+                    Current Balance
                   </Typography>
                   <Typography 
                     fontWeight={700} 
                     sx={{ 
                       fontSize: '1.1rem',
-                      color: summary.totalIn - summary.totalOut >= 0 
+                      color: scheme.balance >= 0 
                         ? estbelColors.success.main 
                         : estbelColors.error.main,
                     }}
                   >
-                    TZS {formatAbbreviated(summary.totalIn - summary.totalOut)}
+                    TZS {formatAbbreviated(scheme.balance)}
                   </Typography>
                 </Stack>
               </Box>
