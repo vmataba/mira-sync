@@ -4,13 +4,11 @@ import {
   Typography,
   Stack,
   Card,
-  CardContent,
   Button,
   IconButton,
   Fab,
   Grid2 as Grid,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   TextField,
@@ -54,7 +52,7 @@ export const EstbelDashboard = React.memo(({ currentUser, onBack }: EstbelDashbo
   const isSmall = useMediaQuery(theme.breakpoints.down('sm'))
   
   // Hooks
-  const { schemes, stats, createScheme, updateScheme, deleteScheme } = useSchemes()
+  const { schemes, createScheme, updateScheme, deleteScheme } = useSchemes()
   const { selectedSchemeId, selectedScheme, selectScheme } = useSchemeSelection()
   const {
     transactions,

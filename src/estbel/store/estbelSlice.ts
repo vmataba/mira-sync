@@ -6,11 +6,6 @@ import type {
   SchemeStats,
 } from '../types'
 
-type PayloadAction<P = void> = {
-  payload: P
-  type: string
-}
-
 interface Action<T = unknown> {
   type: string
   payload: T

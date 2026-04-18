@@ -7,6 +7,7 @@ import {
   getDocs,
   query,
   where,
+  orderBy,
   onSnapshot,
   writeBatch,
 } from 'firebase/firestore'

@@ -4,7 +4,6 @@ import {
   setSchemes,
   setTransactions,
   setLoading,
-  setError,
   setSelectedScheme,
   setFilters,
   resetFilters,
