@@ -14,7 +14,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import { db } from '../firebaseApp'
-import type { Task, Sprint, Expense } from '../models'
+import type { Task, Sprint, Expense, Comment } from '../models'
 import type { AuthUser } from '../auth/authService'
 
 // Collection names
@@ -23,6 +23,7 @@ const COLLECTIONS = {
   SPRINTS: 'sprints',
   USERS: 'users',
   EXPENSES: 'expenses',
+  COMMENTS: 'comments',
 } as const
 
 // ============= TASKS =============
@@ -614,6 +615,119 @@ export const expenseService = {
         expensesByMonth: {},
         expensesByPurpose: {},
       }
+    }
+  },
+}
+
+// ============= COMMENTS =============
+
+export const commentService = {
+  async getCommentsByTaskId(taskId: string): Promise<Comment[]> {
+    try {
+      const commentsRef = collection(db, COLLECTIONS.COMMENTS)
+      const q = query(commentsRef, where('taskId', '==', taskId))
+      const snapshot = await getDocs(q)
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Comment[]
+    } catch (error) {
+      console.error('Error fetching comments:', error)
+      return []
+    }
+  },
+
+  async addComment(comment: Omit<Comment, 'id'>): Promise<string | null> {
+    try {
+      const commentsRef = collection(db, COLLECTIONS.COMMENTS)
+      // Build data without undefined fields (Firestore rejects undefined)
+      const data: Record<string, any> = {
+        taskId: comment.taskId,
+        userId: comment.userId,
+        userName: comment.userName,
+        text: comment.text,
+        createdAt: comment.createdAt || new Date().toISOString(),
+      }
+      if (comment.parentId) {
+        data.parentId = comment.parentId
+      }
+      const docRef = await addDoc(commentsRef, data)
+      return docRef.id
+    } catch (error) {
+      console.error('Error adding comment:', error)
+      return null
+    }
+  },
+
+  async updateComment(commentId: string, text: string): Promise<boolean> {
+    try {
+      const commentRef = doc(db, COLLECTIONS.COMMENTS, commentId)
+      await updateDoc(commentRef, {
+        text,
+        updatedAt: new Date().toISOString(),
+      })
+      return true
+    } catch (error) {
+      console.error('Error updating comment:', error)
+      return false
+    }
+  },
+
+  async deleteComment(commentId: string): Promise<boolean> {
+    try {
+      const commentRef = doc(db, COLLECTIONS.COMMENTS, commentId)
+      await deleteDoc(commentRef)
+      return true
+    } catch (error) {
+      console.error('Error deleting comment:', error)
+      return false
+    }
+  },
+
+  subscribeToTaskComments(taskId: string, callback: (comments: Comment[]) => void): Unsubscribe {
+    const commentsRef = collection(db, COLLECTIONS.COMMENTS)
+    const q = query(commentsRef, where('taskId', '==', taskId))
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const comments = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Comment[]
+        callback(comments)
+      },
+      (error) => {
+        console.error('Error subscribing to task comments:', error)
+      }
+    )
+  },
+
+  subscribeToAllComments(callback: (comments: Comment[]) => void): Unsubscribe {
+    const commentsRef = collection(db, COLLECTIONS.COMMENTS)
+    return onSnapshot(
+      commentsRef,
+      (snapshot) => {
+        const comments = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Comment[]
+        callback(comments)
+      },
+      (error) => {
+        console.error('Error subscribing to all comments:', error)
+      }
+    )
+  },
+
+  async deleteCommentsByTaskId(taskId: string): Promise<boolean> {
+    try {
+      const comments = await this.getCommentsByTaskId(taskId)
+      const deletePromises = comments.map((c) => this.deleteComment(c.id))
+      await Promise.all(deletePromises)
+      return true
+    } catch (error) {
+      console.error('Error deleting task comments:', error)
+      return false
     }
   },
 }

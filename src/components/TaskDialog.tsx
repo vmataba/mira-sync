@@ -21,7 +21,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import CloseIcon from '@mui/icons-material/Close'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import type { Dayjs } from 'dayjs'
-import type { Assignment, Priority, Sprint, TaskType } from '../models'
+import type { Assignment, Priority, Sprint, TaskType, TaskStatus } from '../models'
 import { formatInputValue, parseFormattedNumber } from '../utils/currency'
 
 interface TaskFormState {
@@ -33,6 +33,7 @@ interface TaskFormState {
   assigneeId: string
   deadline: Dayjs | null
   priority: Priority
+  status: TaskStatus
   progress: string
   amount: string
   currency: string
@@ -193,6 +194,22 @@ export const TaskDialog = React.memo(({
                 </Select>
               </FormControl>
             </Stack>
+
+            <FormControl fullWidth>
+              <InputLabel id="status-label">Status</InputLabel>
+              <Select
+                labelId="status-label"
+                label="Status"
+                value={form.status}
+                onChange={(e) => onChange('status', e.target.value as TaskStatus)}
+              >
+                <MenuItem value="new">New</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="in_progress">In Progress</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="discarded">Discarded</MenuItem>
+              </Select>
+            </FormControl>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth>

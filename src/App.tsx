@@ -43,7 +43,7 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import CalendarViewWeekIcon from '@mui/icons-material/CalendarViewWeek'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import type { Assignment, Priority, Sprint, Task, TaskType, Expense } from './models'
+import type { Assignment, Comment, Priority, Sprint, Task, TaskType, TaskStatus, Expense } from './models'
 import { MiraSyncLogo } from './components/Logo'
 import { TaskCard } from './components/TaskCard'
 import { TaskDialog } from './components/TaskDialog'
@@ -52,9 +52,12 @@ import { LoginScreen } from './components/LoginScreen'
 import { CommandCenter } from './components/CommandCenter'
 import { ExpensesPage } from './pages/ExpensesPage'
 import type { AuthUser } from './auth/authService'
-import { taskService, sprintService, userService, expenseService, initializeFirestore } from './services/firestoreService'
+import { taskService, sprintService, userService, expenseService, commentService, initializeFirestore } from './services/firestoreService'
 import { firebaseAuthService } from './services/firebaseAuthService'
 import { parseFormattedNumber, formatInputValue } from './utils/currency'
+import { getEffectiveStatus, isTaskResolved } from './utils/taskUtils'
+import { CompletedTasksSection } from './components/CompletedTasksSection'
+import { TaskCommentsDialog } from './components/comments/TaskCommentsDialog'
 import { estbelTheme, estbelColors } from './theme'
 import { store, EstbelDashboard } from './estbel'
 
@@ -77,6 +80,7 @@ interface TaskFormState {
   assigneeId: string
   deadline: Dayjs | null
   priority: Priority
+  status: TaskStatus
   progress: string
   amount: string
   currency: string
@@ -91,6 +95,7 @@ const emptyTaskForm: TaskFormState = {
   assigneeId: '',
   deadline: null,
   priority: 'medium',
+  status: 'new',
   progress: '',
   amount: '',
   currency: 'TZS',
@@ -126,12 +131,17 @@ function App() {
   // Expense tracker state
   const [expenses, setExpenses] = useState<Expense[]>([])
 
+  // Comments state
+  const [allComments, setAllComments] = useState<Comment[]>([])
+  const [commentsDialogTask, setCommentsDialogTask] = useState<Task | null>(null)
+
   // Initialize Firebase data on mount
   useEffect(() => {
     let unsubscribeTasks: (() => void) | undefined
     let unsubscribeSprints: (() => void) | undefined
     let unsubscribeUsers: (() => void) | undefined
     let unsubscribeExpenses: (() => void) | undefined
+    let unsubscribeComments: (() => void) | undefined
 
     const initializeData = async () => {
       try {
@@ -178,6 +188,10 @@ function App() {
           setExpenses(fetchedExpenses)
         })
 
+        unsubscribeComments = commentService.subscribeToAllComments((fetchedComments) => {
+          setAllComments(fetchedComments)
+        })
+
         setLoading(false)
       } catch (error) {
         console.error('Error initializing data:', error)
@@ -193,6 +207,7 @@ function App() {
       if (unsubscribeSprints) unsubscribeSprints()
       if (unsubscribeUsers) unsubscribeUsers()
       if (unsubscribeExpenses) unsubscribeExpenses()
+      if (unsubscribeComments) unsubscribeComments()
     }
   }, [])
 
@@ -240,7 +255,7 @@ function App() {
     if (total === 0) {
       return { total: 0, completed: 0, avgProgress: 0 }
     }
-    const completed = tasksForSelectedSprint.filter((t) => t.progress >= 100).length
+    const completed = tasksForSelectedSprint.filter((t) => isTaskResolved(t)).length
     const avgProgress =
       tasksForSelectedSprint.reduce((sum, t) => sum + t.progress, 0) / total
     return {
@@ -254,6 +269,14 @@ function App() {
     () => sprints.find((s) => s.id === activePlanWindowId),
     [sprints, activePlanWindowId]
   )
+
+  const commentCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    allComments.forEach((c) => {
+      counts[c.taskId] = (counts[c.taskId] || 0) + 1
+    })
+    return counts
+  }, [allComments])
 
   const handleOpenCreate = () => {
     // By default, create under the selected Plan Window.
@@ -304,6 +327,20 @@ function App() {
     const assignee = assignments.find((a) => a.id === form.assigneeId)
     const progressValue = form.progress === '' ? 0 : Number(form.progress)
 
+    // Determine status and completedAt
+    let status = form.status || 'new'
+    let completedAt: string | null = null
+
+    // Auto-transition: if progress reaches 100 and status isn't already completed/discarded
+    if (progressValue >= 100 && status !== 'completed' && status !== 'discarded') {
+      status = 'completed'
+    }
+    // Set completedAt when status is completed
+    if (status === 'completed' || status === 'discarded') {
+      const existingTask = tasks.find((t) => t.id === form.id)
+      completedAt = existingTask?.completedAt || new Date().toISOString()
+    }
+
     // Build task data, omitting undefined fields for Firebase
     const taskData: any = {
       title: form.title.trim(),
@@ -311,6 +348,8 @@ function App() {
       sprintId: form.sprintId,
       priority: form.priority,
       progress: progressValue,
+      status,
+      completedAt,
     }
 
     // Only add optional fields if they have values
@@ -412,6 +451,7 @@ function App() {
       assigneeId: task.assignee?.id ?? assignments[0]?.id ?? '',
       deadline: task.deadline ? dayjs(task.deadline) : null,
       priority: task.priority,
+      status: getEffectiveStatus(task),
       progress: task.progress === 0 ? '' : task.progress.toString(),
       amount: task.monetary?.amount ? formatInputValue(task.monetary.amount.toString()) : '',
       currency: 'TZS',
@@ -612,11 +652,22 @@ function App() {
     
     const progressHistory = [...(task.progressHistory || []), historyEntry]
     
+    // Auto-transition status based on progress
+    const updateData: any = { progress: newProgress, progressHistory }
+    const currentStatus = getEffectiveStatus(task)
+    
+    if (newProgress >= 100 && currentStatus !== 'completed' && currentStatus !== 'discarded') {
+      updateData.status = 'completed'
+      updateData.completedAt = new Date().toISOString()
+    } else if (newProgress < 100 && currentStatus === 'completed') {
+      updateData.status = 'in_progress'
+      updateData.completedAt = null
+    } else if (newProgress > 0 && currentStatus === 'new') {
+      updateData.status = 'in_progress'
+    }
+
     try {
-      await taskService.updateTask(taskId, { 
-        progress: newProgress,
-        progressHistory,
-      })
+      await taskService.updateTask(taskId, updateData)
       setSnackbar({ open: true, message: 'Progress updated successfully', severity: 'success' })
     } catch (error) {
       console.error('Error updating progress:', error)
@@ -660,17 +711,31 @@ function App() {
       ? [...(task.progressHistory || []), progressHistoryEntry]
       : task.progressHistory
 
+    // Auto-transition status based on progress
+    const updateData: any = {
+      monetary: {
+        amount: task.monetary.amount,
+        currency: task.monetary.currency,
+        invested: newInvested,
+      },
+      progress: newProgress,
+      investedHistory,
+      progressHistory,
+    }
+    const currentStatus = getEffectiveStatus(task)
+
+    if (newProgress >= 100 && currentStatus !== 'completed' && currentStatus !== 'discarded') {
+      updateData.status = 'completed'
+      updateData.completedAt = new Date().toISOString()
+    } else if (newProgress < 100 && currentStatus === 'completed') {
+      updateData.status = 'in_progress'
+      updateData.completedAt = null
+    } else if (newProgress > 0 && currentStatus === 'new') {
+      updateData.status = 'in_progress'
+    }
+
     try {
-      await taskService.updateTask(taskId, {
-        monetary: {
-          amount: task.monetary.amount,
-          currency: task.monetary.currency,
-          invested: newInvested,
-        },
-        progress: newProgress,
-        investedHistory,
-        progressHistory,
-      })
+      await taskService.updateTask(taskId, updateData)
       setSnackbar({ open: true, message: 'Invested amount updated successfully', severity: 'success' })
     } catch (error) {
       console.error('Error updating invested amount:', error)
@@ -1562,14 +1627,14 @@ function App() {
             </Stack>
 
             <Stack spacing={3}>
-                {/* Active Tasks */}
-                {tasksForSelectedSprint.filter(t => t.progress < 100).length > 0 && (
+                {/* Active Tasks (not resolved) */}
+                {tasksForSelectedSprint.filter(t => !isTaskResolved(t)).length > 0 && (
                   <Box>
                     <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'text.primary' }}>
-                      Active Tasks ({tasksForSelectedSprint.filter(t => t.progress < 100).length})
+                      Active Tasks ({tasksForSelectedSprint.filter(t => !isTaskResolved(t)).length})
                     </Typography>
                     <Stack spacing={2}>
-                      {tasksForSelectedSprint.filter(t => t.progress < 100).map((task) => (
+                      {tasksForSelectedSprint.filter(t => !isTaskResolved(t)).map((task) => (
                         <TaskCard
                           key={task.id}
                           task={task}
@@ -1583,38 +1648,37 @@ function App() {
                           onClearProgressHistory={handleClearProgressHistory}
                           onDeleteInvestedHistory={handleDeleteInvestedHistory}
                           onClearInvestedHistory={handleClearInvestedHistory}
+                          onOpenComments={() => setCommentsDialogTask(task)}
+                          commentCount={commentCounts[task.id] || 0}
                         />
                       ))}
                     </Stack>
                   </Box>
                 )}
 
-                {/* Completed Tasks */}
-                {tasksForSelectedSprint.filter(t => t.progress >= 100).length > 0 && (
-                  <Box>
-                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'success.main' }}>
-                      Completed Tasks ({tasksForSelectedSprint.filter(t => t.progress >= 100).length})
-                    </Typography>
-                    <Stack spacing={2}>
-                      {tasksForSelectedSprint.filter(t => t.progress >= 100).map((task) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          onClick={() => handleEditTask(task)}
-                          onEdit={() => handleEditTask(task)}
-                          onDelete={() => handleDeleteTask(task.id)}
-                          onIncrementProgress={handleIncrementProgress}
-                          onIncrementInvested={handleIncrementInvested}
-                          onTogglePin={handleTogglePin}
-                          onDeleteProgressHistory={handleDeleteProgressHistory}
-                          onClearProgressHistory={handleClearProgressHistory}
-                          onDeleteInvestedHistory={handleDeleteInvestedHistory}
-                          onClearInvestedHistory={handleClearInvestedHistory}
-                        />
-                      ))}
-                    </Stack>
-                  </Box>
-                )}
+                {/* Completed & Discarded Tasks - Collapsible */}
+                <CompletedTasksSection count={tasksForSelectedSprint.filter(t => isTaskResolved(t)).length}>
+                  <Stack spacing={2}>
+                    {tasksForSelectedSprint.filter(t => isTaskResolved(t)).map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onClick={() => handleEditTask(task)}
+                        onEdit={() => handleEditTask(task)}
+                        onDelete={() => handleDeleteTask(task.id)}
+                        onIncrementProgress={handleIncrementProgress}
+                        onIncrementInvested={handleIncrementInvested}
+                        onTogglePin={handleTogglePin}
+                        onDeleteProgressHistory={handleDeleteProgressHistory}
+                        onClearProgressHistory={handleClearProgressHistory}
+                        onDeleteInvestedHistory={handleDeleteInvestedHistory}
+                        onClearInvestedHistory={handleClearInvestedHistory}
+                        onOpenComments={() => setCommentsDialogTask(task)}
+                        commentCount={commentCounts[task.id] || 0}
+                      />
+                    ))}
+                  </Stack>
+                </CompletedTasksSection>
 
                 {tasksForSelectedSprint.length === 0 && (
                   <Box
@@ -1725,6 +1789,16 @@ function App() {
         onSave={handleSaveMember}
       />
       
+      {/* Comments Dialog */}
+      {currentUser && (
+        <TaskCommentsDialog
+          open={!!commentsDialogTask}
+          onClose={() => setCommentsDialogTask(null)}
+          task={commentsDialogTask}
+          currentUser={currentUser}
+        />
+      )}
+
       {/* Snackbar for flash messages */}
       <Snackbar
         open={snackbar.open}

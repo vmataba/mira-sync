@@ -2,6 +2,8 @@ export type Priority = 'high' | 'medium' | 'low'
 
 export type TaskType = 'monetary' | 'general'
 
+export type TaskStatus = 'new' | 'pending' | 'in_progress' | 'completed' | 'discarded'
+
 export interface Assignment {
   id: string
   name: string
@@ -30,6 +32,17 @@ export interface HistoryEntry {
   note?: string
 }
 
+export interface Comment {
+  id: string
+  taskId: string
+  userId: string
+  userName: string
+  text: string
+  createdAt: string
+  updatedAt?: string
+  parentId?: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -41,6 +54,8 @@ export interface Task {
   priority: Priority
   progress: number // 0-100
   monetary?: MonetaryInfo
+  status?: TaskStatus
+  completedAt?: string
   progressHistory?: HistoryEntry[]
   investedHistory?: HistoryEntry[]
   pinned?: boolean // Pinned tasks appear at the top

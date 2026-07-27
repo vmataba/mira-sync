@@ -27,8 +27,12 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
+import CancelIcon from '@mui/icons-material/Cancel'
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'
 import type { Task } from '../models'
 import { formatAbbreviated, formatInputValue } from '../utils/currency'
+import { getEffectiveStatus, isTaskResolved, formatCompletedDate } from '../utils/taskUtils'
+import { TaskStatusChip } from './TaskStatusChip'
 import { HistoryDialog } from './HistoryDialog'
 
 interface TaskCardProps {
@@ -43,9 +47,14 @@ interface TaskCardProps {
   onClearProgressHistory?: (taskId: string) => void
   onDeleteInvestedHistory?: (taskId: string, index: number) => void
   onClearInvestedHistory?: (taskId: string) => void
+  onOpenComments?: () => void
+  commentCount?: number
 }
 
-export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncrementProgress, onIncrementInvested, onTogglePin, onDeleteProgressHistory, onClearProgressHistory, onDeleteInvestedHistory, onClearInvestedHistory }: TaskCardProps) => {
+export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncrementProgress, onIncrementInvested, onTogglePin, onDeleteProgressHistory, onClearProgressHistory, onDeleteInvestedHistory, onClearInvestedHistory, onOpenComments, commentCount = 0 }: TaskCardProps) => {
+  const effectiveStatus = getEffectiveStatus(task)
+  const resolved = isTaskResolved(task)
+  const isDiscarded = effectiveStatus === 'discarded'
   const [progressDialog, setProgressDialog] = useState(false)
   const [investedDialog, setInvestedDialog] = useState(false)
   const [progressValue, setProgressValue] = useState('')
@@ -82,21 +91,23 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
         cursor: 'pointer',
         transition: 'all 200ms ease-out',
         border: '2px solid',
-        borderColor: task.progress >= 100 
-          ? 'success.main' 
-          : task.deadline && new Date(task.deadline) < new Date() && task.progress < 100
-            ? 'error.main'
-            : task.priority === 'high'
-              ? 'error.light'
-              : 'divider',
+        borderColor: isDiscarded
+          ? 'grey.400'
+          : resolved
+            ? 'success.main' 
+            : task.deadline && new Date(task.deadline) < new Date() && !resolved
+              ? 'error.main'
+              : task.priority === 'high'
+                ? 'error.light'
+                : 'divider',
         borderLeftWidth: 6,
         borderLeftColor: task.priority === 'high' 
           ? 'error.main' 
           : task.priority === 'medium' 
             ? 'warning.main' 
             : 'success.main',
-        bgcolor: task.progress >= 100 ? 'success.50' : 'background.paper',
-        opacity: task.progress >= 100 ? 0.85 : 1,
+        bgcolor: isDiscarded ? 'grey.50' : resolved ? 'success.50' : 'background.paper',
+        opacity: resolved ? 0.85 : 1,
         position: 'relative',
         overflow: 'visible',
         '&:hover': {
@@ -109,7 +120,7 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
     >
       <CardContent sx={{ pt: { xs: 5, sm: 5 }, pb: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 2.5 }, position: 'relative' }}>
         {/* Pinned Badge */}
-        {task.pinned && task.progress < 100 && (
+        {task.pinned && !resolved && (
           <Box
             sx={{
               position: 'absolute',
@@ -134,7 +145,7 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
         )}
 
         {/* Completion Badge */}
-        {task.progress >= 100 && (
+        {effectiveStatus === 'completed' && (
           <Box
             sx={{
               position: 'absolute',
@@ -157,9 +168,34 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
             COMPLETED
           </Box>
         )}
+
+        {/* Discarded Badge */}
+        {isDiscarded && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: -12,
+              right: 16,
+              bgcolor: 'grey.500',
+              color: 'white',
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+            }}
+          >
+            <CancelIcon sx={{ fontSize: 14 }} />
+            DISCARDED
+          </Box>
+        )}
         
         {/* Overdue Badge */}
-        {task.deadline && new Date(task.deadline) < new Date() && task.progress < 100 && (
+        {task.deadline && new Date(task.deadline) < new Date() && !resolved && (
           <Box
             sx={{
               position: 'absolute',
@@ -277,8 +313,8 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
                 fontWeight: 600,
                 mb: 0.5,
                 fontSize: { xs: '1rem', sm: '1.125rem' },
-                textDecoration: task.progress >= 100 ? 'line-through' : 'none',
-                color: task.progress >= 100 ? 'text.secondary' : 'text.primary',
+                textDecoration: resolved ? 'line-through' : 'none',
+                color: resolved ? 'text.secondary' : 'text.primary',
               }}
               noWrap
             >
@@ -299,6 +335,7 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
               spacing={1}
               sx={{ mt: 1.5, flexWrap: 'wrap', gap: 0.75 }}
             >
+              <TaskStatusChip status={effectiveStatus} />
               <Chip
                 size="small"
                 label={
@@ -361,7 +398,23 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
                   />
                 </Tooltip>
               )}
-              {task.deadline && (
+              {resolved && task.completedAt ? (
+                <Tooltip title={`Completed on ${new Date(task.completedAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`} arrow>
+                  <Chip
+                    size="small"
+                    icon={<CheckCircleIcon />}
+                    label={`Completed On: ${formatCompletedDate(task.completedAt)}`}
+                    sx={{
+                      bgcolor: isDiscarded ? 'grey.200' : 'success.light',
+                      color: isDiscarded ? 'grey.700' : 'success.dark',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': {
+                        color: isDiscarded ? 'grey.500' : 'success.dark',
+                      },
+                    }}
+                  />
+                </Tooltip>
+              ) : !resolved && task.deadline ? (
                 <Tooltip title={`Deadline: ${new Date(task.deadline).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`} arrow>
                   <Chip
                     size="small"
@@ -403,6 +456,32 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
                     }}
                   />
                 </Tooltip>
+              ) : null}
+              {onOpenComments && (
+                <Tooltip title="Comments" arrow>
+                  <Chip
+                    size="small"
+                    icon={<ChatBubbleOutlineIcon />}
+                    label={commentCount > 0 ? commentCount : '0'}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenComments()
+                    }}
+                    sx={{
+                      bgcolor: commentCount > 0 ? 'primary.light' : 'action.hover',
+                      color: commentCount > 0 ? 'primary.dark' : 'text.secondary',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      '& .MuiChip-icon': {
+                        color: commentCount > 0 ? 'primary.dark' : 'text.secondary',
+                      },
+                      '&:hover': {
+                        bgcolor: 'primary.light',
+                        color: 'primary.dark',
+                      },
+                    }}
+                  />
+                </Tooltip>
               )}
             </Stack>
           </Box>
@@ -425,7 +504,7 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
                     variant="caption"
                     sx={{
                       fontWeight: 700,
-                      color: task.progress >= 100 ? 'success.main' : task.progress >= 50 ? 'primary.main' : 'text.secondary',
+                      color: resolved ? 'success.main' : task.progress >= 50 ? 'primary.main' : 'text.secondary',
                     }}
                   >
                     {task.progress}%
@@ -490,7 +569,7 @@ export const TaskCard = React.memo(({ task, onClick, onEdit, onDelete, onIncreme
                   bgcolor: 'action.hover',
                   '& .MuiLinearProgress-bar': {
                     borderRadius: 4,
-                    bgcolor: task.progress >= 100 ? 'success.main' : 'primary.main',
+                    bgcolor: resolved ? 'success.main' : 'primary.main',
                   },
                 }}
               />
